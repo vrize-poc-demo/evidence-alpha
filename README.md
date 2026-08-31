@@ -202,6 +202,18 @@ For a controlled benchmark demo, you can set `USE_PRACTICE_ANSWER_KEY=true`. Tha
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for a 1-2 week hosted demo path using Render. The included `render.yaml` deploys one web service that serves both the FastAPI API and the built React frontend.
 
+## Render vs Local Versions
+
+Render version:
+
+- Use **OpenAI ChatGPT 4.1-mini**.
+- Local model options remain visible, but the UI explains that they only work locally.
+
+Local version:
+
+- Use **OpenAI ChatGPT 4.1-mini**, **qwen3:14b local**, or **llama3.1 local**.
+- Local models require Ollama running on the same machine.
+
 ## API Endpoints
 
 - `GET /health` - service status

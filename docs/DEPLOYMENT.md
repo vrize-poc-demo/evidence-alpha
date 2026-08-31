@@ -84,6 +84,12 @@ For better accuracy:
 - qwen3:14b local
 - llama3.1 local
 
+## Render vs Local Behavior
+
+Render deployment should use OpenAI ChatGPT 4.1-mini. The local model options are still visible in the dropdown, but the UI shows an info message explaining that they require the local version with Ollama.
+
+Local runs can use all three options. The two local models require Ollama running on the same machine.
+
 Local Ollama setup:
 
 ```bash

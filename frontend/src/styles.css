@@ -407,6 +407,17 @@ select {
   gap: 8px;
 }
 
+.modelNotice {
+  background: #fff8e5;
+  border: 1px solid #efd790;
+  border-radius: 7px;
+  color: #5c4610;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.4;
+  padding: 10px;
+}
+
 .sampleList button {
   color: #1f332c;
   background: #f7faf8;

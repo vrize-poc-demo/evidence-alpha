@@ -18,6 +18,7 @@ import "./styles.css";
 
 const API = import.meta.env.VITE_API_URL || (window.location.port === "5173" ? "http://localhost:8000" : "");
 const HISTORY_KEY = "evidence-alpha-chat-history";
+const IS_LOCAL_APP = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
 
 function App() {
   const [page, setPage] = useState("dashboard");
@@ -322,6 +323,7 @@ function UploadPage({ fetchFilings, fetchProcessor, setPage }) {
 function ChatPage({ filings, selectedDoc, setSelectedDoc, selectedModel, setSelectedModel, session, askQuestion, startNewChat }) {
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState(false);
+  const localModelSelected = selectedModel.startsWith("local-");
 
   const samples = [
     {
@@ -374,6 +376,16 @@ function ChatPage({ filings, selectedDoc, setSelectedDoc, selectedModel, setSele
               <option value="local-llama3.1">llama3.1 local</option>
             </select>
           </label>
+          {localModelSelected && !IS_LOCAL_APP && (
+            <div className="modelNotice">
+              Local models work only in the local version with Ollama running. Use OpenAI ChatGPT 4.1-mini on Render.
+            </div>
+          )}
+          {localModelSelected && IS_LOCAL_APP && (
+            <div className="modelNotice">
+              Start Ollama and pull the selected model before asking.
+            </div>
+          )}
           <div className="sampleList">
             <strong>Sample questions</strong>
             {samples.map((sample) => (
