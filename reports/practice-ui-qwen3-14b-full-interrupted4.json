@@ -1,0 +1,130 @@
+{
+  "generatedAt": "2026-08-31T17:59:33.495Z",
+  "appUrl": "http://127.0.0.1:8000/",
+  "model": "local-qwen3-14b",
+  "start": 0,
+  "limit": null,
+  "summary": {
+    "totalAvailable": 136,
+    "tested": 4,
+    "points": 2,
+    "maxPoints": 4,
+    "correct": 2,
+    "correctWrongLocation": 0,
+    "abstained": 2,
+    "wrongAnswer": 0,
+    "uiErrors": 0
+  },
+  "results": [
+    {
+      "index": 0,
+      "financebenchId": "financebench_id_03029",
+      "company": "3M",
+      "expectedDoc": "3M_2018_10K",
+      "expectedPages": [
+        59
+      ],
+      "expectedAnswer": "$1577.00",
+      "question": "What is the FY2018 capital expenditure amount (in USD millions) for 3M? Give a response to the question by relying on the details shown in the cash flow statement.",
+      "result": {
+        "status": "answered",
+        "document": "3M_2018_10K",
+        "page": 60,
+        "confidence": 0.95,
+        "model": "qwen3:14b local",
+        "answer": "The requested capital expenditure amount is $1,577 million, based on the purchases of property, plant and equipment (PP&E) line in the cash flow statement.",
+        "citation": "Source: 3M_2018_10K, page 60"
+      },
+      "score": {
+        "points": 1,
+        "label": "correct_answer_correct_location",
+        "answerCorrect": true,
+        "locationCorrect": true
+      },
+      "durationMs": 80581
+    },
+    {
+      "index": 1,
+      "financebenchId": "financebench_id_04672",
+      "company": "3M",
+      "expectedDoc": "3M_2018_10K",
+      "expectedPages": [
+        57
+      ],
+      "expectedAnswer": "$8.70",
+      "question": "Assume that you are a public equities analyst. Answer the following question by primarily using information that is shown in the balance sheet: what is the year end FY2018 net PPNE for 3M? Answer in USD billions.",
+      "result": {
+        "status": "answered",
+        "document": "3M_2018_10K",
+        "page": 58,
+        "confidence": 1,
+        "model": "qwen3:14b local",
+        "answer": "Year-end net PP&E is $8.738 billion.",
+        "citation": "Source: 3M_2018_10K, page 58"
+      },
+      "score": {
+        "points": 1,
+        "label": "correct_answer_correct_location",
+        "answerCorrect": true,
+        "locationCorrect": true
+      },
+      "durationMs": 71826
+    },
+    {
+      "index": 2,
+      "financebenchId": "financebench_id_00499",
+      "company": "3M",
+      "expectedDoc": "3M_2022_10K",
+      "expectedPages": [
+        47,
+        49,
+        51
+      ],
+      "expectedAnswer": "No, the company is managing its CAPEX and Fixed Assets pretty efficiently, which is evident from below key metrics:\nCAPEX/Revenue Ratio: 5.1%\nFixed assets/Total Assets: 20%\nReturn on Assets= 12.4%",
+      "question": "Is 3M a capital-intensive business based on FY2022 data?",
+      "result": {
+        "status": "not_found",
+        "document": "3M_2022_10K",
+        "page": 639,
+        "confidence": 0.3,
+        "model": "qwen3:14b local",
+        "answer": "The evidence does not provide sufficient data to determine if 3M is capital-intensive in FY2022. While capital expenditures (CapEx) of $1,749 million are reported, key metrics like revenue, total assets, or PP&E-to-revenue ratios are absent. Capital intensity requires comparative analysis of CapEx relative to revenue or assets, which is not available here.",
+        "citation": "Source: 3M_2022_10K, page 639"
+      },
+      "score": {
+        "points": 0,
+        "label": "not_found_or_abstained",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 84996
+    },
+    {
+      "index": 3,
+      "financebenchId": "financebench_id_01226",
+      "company": "3M",
+      "expectedDoc": "3M_2022_10K",
+      "expectedPages": [
+        26
+      ],
+      "expectedAnswer": "Operating Margin for 3M in FY2022 has decreased by 1.7% primarily due to: \n-Decrease in gross Margin\n-mostly one-off charges including Combat Arms Earplugs litigation, impairment related to exiting PFAS manufacturing, costs related to exiting Russia and divestiture-related restructuring\ncharges",
+      "question": "What drove operating margin change as of FY2022 for 3M? If operating margin is not a useful metric for a company like this, then please state that and explain why.",
+      "result": {
+        "status": "not_found",
+        "document": "3M_2022_10K",
+        "page": 16,
+        "confidence": 0,
+        "model": "qwen3:14b local",
+        "answer": "not_found",
+        "citation": "Source: 3M_2022_10K, page 16"
+      },
+      "score": {
+        "points": 0,
+        "label": "not_found_or_abstained",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 140287
+    }
+  ]
+}

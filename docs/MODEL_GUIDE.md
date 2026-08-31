@@ -114,8 +114,9 @@ Cons:
 Observed local testing:
 
 - Qwen3 14B passed the first practice-question UI smoke test.
+- After page-based HTML parsing and financial style prompting, Qwen3 14B scored 2/5 in a real browser UI sample: it answered direct extraction questions correctly and abstained on harder reasoning questions.
 - A prior interrupted 3-question local run had 1 correct answer and 2 UI/model timeouts.
-- It is the best free local option in this project, but OpenAI GPT-4.1 mini remains the safer judged-accuracy mode.
+- It is the best free local option in this project, but OpenAI GPT-4.1 mini remains the safer judged-accuracy mode unless more table-aware calculators are added.
 
 ## Launch-Time Learning
 

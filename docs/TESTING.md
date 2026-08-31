@@ -97,6 +97,8 @@ Latest local UI evaluation notes:
 - Do not present practice answer-key results as model accuracy.
 - OpenAI real sample testing could not score answers locally because the local `.env` still contains the placeholder API key. The UI flow worked, but answers returned API-key errors.
 - `qwen3:14b` smoke test passed `1/1`, scoring `1/1`.
+- After page-based HTML parsing and financial style prompting, a real `qwen3:14b` UI sample scored `2/5`: two direct extraction questions were correct with citations, and three reasoning questions abstained instead of hallucinating.
+- A full local Qwen UI run was started but stopped after `4` completed questions because each answer took roughly 45-140 seconds. At that pace, all `136` available questions would take roughly 1.5-2.5 hours on this machine.
 - A prior interrupted `qwen3:14b` local UI run reached `3` completed/recorded questions with `1` correct and `2` UI/model timeouts.
 - The timeout errors started repeating around the Best Buy filings, so the run was stopped instead of waiting several more hours on the local machine.
 - Detailed output is written under `reports/`.
