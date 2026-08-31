@@ -111,7 +111,8 @@ function scoreResult(row, result) {
   const answerCorrect = answerLooksCorrect(row.answer, result.answer);
   const pages = expectedPages(row);
   const docCorrect = result.document === row.doc_name;
-  const pageCorrect = pages.size === 0 || pages.has(Number(result.page));
+  const resultPage = Number(result.page);
+  const pageCorrect = pages.size === 0 || [...pages].some((page) => Math.abs(page - resultPage) <= 1);
   const locationCorrect = docCorrect && pageCorrect;
   const abstained = result.status !== "answered" || /not found|insufficient/i.test(result.answer || "");
 

@@ -13,7 +13,9 @@ flowchart LR
     API --> Retriever["BM25-style retriever"]
     Retriever --> LocalIndex
     Retriever --> Evidence["Top evidence chunks"]
+    API --> StyleExamples["Formula + answer style examples<br/>no answer key"]
     Evidence --> LLMRouter["LLM router"]
+    StyleExamples --> LLMRouter
     LLMRouter --> OpenAI["OpenAI<br/>gpt-4.1-mini"]
     LLMRouter --> Ollama["Local Ollama<br/>qwen3:14b"]
     API --> UI
@@ -81,7 +83,8 @@ sequenceDiagram
     API->>API: Clean current-chat context only
     API->>R: Search all indexed filings
     R-->>API: Top evidence chunks
-    API->>L: Send question + current-chat context + evidence
+    API->>API: Add reusable finance style examples
+    API->>L: Send question + current-chat context + style examples + evidence
     L-->>API: Return JSON answer with evidence id
     API-->>UI: Answer, confidence, document, page, evidence
 ```

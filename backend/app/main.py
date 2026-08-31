@@ -439,10 +439,6 @@ def models() -> list[dict[str, str]]:
     return [{"id": key, **value} for key, value in MODEL_CHOICES.items()]
 
 
-def practice_answer_key_enabled() -> bool:
-    return os.getenv("USE_PRACTICE_ANSWER_KEY", "false").lower() in {"1", "true", "yes", "on"}
-
-
 def clean_chat_context(payload: AskRequest) -> list[dict[str, str]]:
     context = []
     for item in payload.chat_context[-8:]:
@@ -572,42 +568,14 @@ def ask(payload: AskRequest) -> AskResponse:
     if not question:
         raise HTTPException(status_code=400, detail="Question is required")
     chat_context = clean_chat_context(payload)
-    use_practice_answer_key = practice_answer_key_enabled()
-
-    exact = index.exact_answer(question, payload.doc_name) if use_practice_answer_key else None
-    if exact:
-        evidence_items = []
-        for item in exact.get("evidence", [])[:3]:
-            evidence_items.append(
-                Evidence(
-                    doc_name=item.get("doc_name") or exact["doc_name"],
-                    page_num=item.get("evidence_page_num"),
-                    text=concise_evidence(item.get("evidence_text", "")),
-                    score=1.0,
-                )
-            )
-        first = evidence_items[0] if evidence_items else None
-        return AskResponse(
-            status="answered",
-            answer=exact["answer"],
-            confidence=0.98,
-            model_used="practice-answer-key",
-            document=exact["doc_name"],
-            page=first.page_num if first else None,
-            evidence=evidence_items,
-            calculation=exact.get("justification"),
-        )
 
     search_doc_name = payload.doc_name
-    if use_practice_answer_key and search_doc_name is None:
-        search_doc_name = index.exact_question_doc(question)
 
     with index_lock:
-        seeded_results = index.exact_question_evidence(question) if use_practice_answer_key else []
         search_results = index.search(contextual_search_question(question, chat_context), search_doc_name, limit=5)
     seen_evidence_ids = set()
     results = []
-    for chunk, score in [*seeded_results, *search_results]:
+    for chunk, score in search_results:
         evidence_key = (chunk.doc_name, chunk.page_num, chunk.text[:160])
         if evidence_key in seen_evidence_ids:
             continue
@@ -632,10 +600,6 @@ def ask(payload: AskRequest) -> AskResponse:
         status = llm_answer["status"]
         used_model = llm_answer.get("model_used") or f"{provider_name()}:{model_name()}"
         evidence_id = llm_answer.get("evidence_id")
-        if seeded_results and answer and not answer.lower().startswith("not found"):
-            status = "answered"
-            confidence = max(confidence, 0.9)
-            evidence_id = 1
     else:
         answer, confidence, calculation = answer_from_evidence(question, results)
         status = "not_found" if answer.lower().startswith("not found") else "answered"

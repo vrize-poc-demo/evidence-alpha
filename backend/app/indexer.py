@@ -98,6 +98,21 @@ def expand_financial_question(question: str) -> str:
         )
     if re.search(r"\boperating margin\b", question, flags=re.I):
         expansions.extend(["operating income", "net sales", "gross margin", "special items"])
+    if re.search(r"\b(?:ppne|pp&e|property plant|fixed assets?)\b", question, flags=re.I):
+        expansions.extend(
+            [
+                "property plant and equipment net",
+                "property plant equipment net",
+                "consolidated balance sheet",
+                "total assets",
+                "accumulated depreciation",
+                "fixed assets",
+            ]
+        )
+    if re.search(r"\bbalance sheet\b|\bstatement of financial position\b", question, flags=re.I):
+        expansions.extend(["consolidated balance sheet", "assets", "liabilities", "current assets", "total assets"])
+    if re.search(r"\bcash flow\b|\bcash flows\b", question, flags=re.I):
+        expansions.extend(["consolidated statement of cash flows", "cash flows from operating activities", "cash flows from investing activities"])
     if not expansions:
         return question
     return f"{question} {' '.join(expansions)}"
@@ -105,14 +120,6 @@ def expand_financial_question(question: str) -> str:
 
 def compact_text(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", text.lower())
-
-
-def normalize_question_text(text: str) -> str:
-    return re.sub(r"\s+", " ", text.strip().lower())
-
-
-def compact_question_text(text: str) -> str:
-    return compact_text(normalize_question_text(text))
 
 
 def clean_text(raw_html: str) -> str:
@@ -131,6 +138,36 @@ def clean_text(raw_html: str) -> str:
     text = re.sub(r"\n[ \t]+", "\n", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
+
+
+def clean_extracted_text(text: str) -> str:
+    text = text.replace("\xa0", " ")
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n[ \t]+", "\n", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def text_from_html_fragment(raw_html: str) -> str:
+    if BeautifulSoup is not None:
+        soup = BeautifulSoup(raw_html, "html.parser")
+        for tag in soup(["script", "style", "noscript"]):
+            tag.decompose()
+        return clean_extracted_text(soup.get_text("\n"))
+    text = re.sub(r"(?is)<(script|style).*?</\1>", " ", raw_html)
+    text = re.sub(r"(?s)<[^>]+>", "\n", text)
+    return clean_extracted_text(html.unescape(text))
+
+
+def extract_page_number(text: str) -> int | None:
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    for line in reversed(lines[-12:]):
+        page_match = re.fullmatch(r"(\d{1,4})", line)
+        if page_match:
+            page = int(page_match.group(1))
+            if 0 < page < 1000 and not 1900 <= page <= 2099:
+                return page
+    return None
 
 
 def split_into_page_chunks(doc_name: str, file_name: str, text: str, target_words: int = 650) -> list[Chunk]:
@@ -172,10 +209,47 @@ def split_into_page_chunks(doc_name: str, file_name: str, text: str, target_word
     return chunks
 
 
+def split_html_pages_into_chunks(doc_name: str, file_name: str, raw_html: str, target_words: int = 650) -> list[Chunk]:
+    page_parts = re.split(r"(?is)<p[^>]*page-break-after\s*:\s*always[^>]*>.*?</p>", raw_html)
+    if len(page_parts) < 5:
+        return []
+
+    chunks: list[Chunk] = []
+    for part in page_parts:
+        text = text_from_html_fragment(part)
+        if not text:
+            continue
+        page_num = extract_page_number(text)
+        lines = [line for line in text.splitlines() if not re.fullmatch(r"\d{1,4}", line.strip())]
+        words = " ".join(lines).split()
+        if not words:
+            continue
+        for start in range(0, len(words), target_words):
+            chunk_words = words[start : start + target_words]
+            joined = " ".join(chunk_words).strip()
+            if len(joined) < 40:
+                continue
+            chunk_id = f"{doc_name}:{len(chunks) + 1}"
+            chunks.append(
+                Chunk(
+                    id=chunk_id,
+                    doc_name=doc_name,
+                    file_name=file_name,
+                    page_num=page_num,
+                    text=joined[:6000],
+                    tokens=tokenize(joined),
+                )
+            )
+    return chunks
+
+
 def parse_filing(path: Path) -> list[Chunk]:
     raw = path.read_text(errors="ignore")
-    text = clean_text(raw)
     doc_name = normalize_doc_name(path.name)
+    html_page_chunks = split_html_pages_into_chunks(doc_name, path.name, raw)
+    if html_page_chunks:
+        return html_page_chunks
+    text = clean_text(raw)
     return split_into_page_chunks(doc_name, path.name, text)
 
 
@@ -199,25 +273,12 @@ def load_question_metadata() -> dict[str, dict[str, str]]:
     return metadata
 
 
-def load_answer_key() -> dict[tuple[str, str], dict]:
-    answers: dict[tuple[str, str], dict] = {}
-    if not QUESTIONS_PATH.exists():
-        return answers
-    for line in QUESTIONS_PATH.read_text(errors="ignore").splitlines():
-        if not line.strip():
-            continue
-        row = json.loads(line)
-        answers[(row["doc_name"], row["question"].strip().lower())] = row
-    return answers
-
-
 class FilingIndex:
     def __init__(self) -> None:
         self.chunks: list[Chunk] = []
         self.doc_freq: Counter[str] = Counter()
         self.by_doc: dict[str, list[Chunk]] = defaultdict(list)
         self.metadata = load_question_metadata()
-        self.answer_key = load_answer_key()
 
     def ensure_index(self) -> None:
         INDEX_DIR.mkdir(parents=True, exist_ok=True)
@@ -376,55 +437,6 @@ class FilingIndex:
 
         scored.sort(key=lambda item: item[1], reverse=True)
         return scored[:limit]
-
-    def exact_answer(self, question: str, doc_name: str | None) -> dict | None:
-        clean_question = normalize_question_text(question)
-        compact_question = compact_question_text(question)
-        if not doc_name:
-            for (answer_doc_name, answer_question), answer in self.answer_key.items():
-                if answer_question == clean_question or compact_question_text(answer_question) == compact_question:
-                    return {**answer, "doc_name": answer_doc_name}
-            return None
-        exact = self.answer_key.get((doc_name, clean_question))
-        if exact:
-            return exact
-        for (answer_doc_name, answer_question), answer in self.answer_key.items():
-            if answer_doc_name == doc_name and compact_question_text(answer_question) == compact_question:
-                return answer
-        return None
-
-    def exact_question_doc(self, question: str) -> str | None:
-        clean_question = normalize_question_text(question)
-        compact_question = compact_question_text(question)
-        for answer_doc_name, answer_question in self.answer_key:
-            if answer_question == clean_question or compact_question_text(answer_question) == compact_question:
-                return answer_doc_name
-        return None
-
-    def exact_question_evidence(self, question: str) -> list[tuple[Chunk, float]]:
-        clean_question = normalize_question_text(question)
-        compact_question = compact_question_text(question)
-        for (answer_doc_name, answer_question), answer in self.answer_key.items():
-            if answer_question != clean_question and compact_question_text(answer_question) != compact_question:
-                continue
-            evidence_results: list[tuple[Chunk, float]] = []
-            for index, item in enumerate(answer.get("evidence", [])[:5], start=1):
-                evidence_text = item.get("evidence_text_full_page") or item.get("evidence_text") or ""
-                if not evidence_text.strip():
-                    continue
-                doc_name = item.get("doc_name") or answer_doc_name
-                chunk = Chunk(
-                    id=f"{doc_name}:practice:{index}",
-                    doc_name=doc_name,
-                    file_name=f"{doc_name}.htm",
-                    page_num=item.get("evidence_page_num"),
-                    text=evidence_text.strip(),
-                    tokens=tokenize(evidence_text),
-                )
-                evidence_results.append((chunk, 100.0 - index))
-            return evidence_results
-        return []
-
 
 def concise_evidence(text: str, max_chars: int = 1200) -> str:
     compact = re.sub(r"\n{2,}", "\n", text).strip()

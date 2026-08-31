@@ -82,6 +82,8 @@ The evaluator starts a fresh chat for every practice question, asks through the 
 - not-found or abstention behavior
 - UI timeout or browser errors
 
+For judged accuracy testing, use the normal app mode. The prompt may include general financial style examples, but those examples must not contain benchmark answers.
+
 Scoring:
 
 - `+1` for correct answer with correct filing/page evidence
@@ -92,8 +94,7 @@ Scoring:
 
 Latest local UI evaluation notes:
 
-- Real UI/model testing should keep `USE_PRACTICE_ANSWER_KEY=false`.
-- Do not present practice answer-key results as model accuracy; that mode is only for internal deterministic demos.
+- Do not present practice answer-key results as model accuracy.
 - OpenAI real sample testing could not score answers locally because the local `.env` still contains the placeholder API key. The UI flow worked, but answers returned API-key errors.
 - `qwen3:14b` smoke test passed `1/1`, scoring `1/1`.
 - A prior interrupted `qwen3:14b` local UI run reached `3` completed/recorded questions with `1` correct and `2` UI/model timeouts.

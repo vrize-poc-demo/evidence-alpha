@@ -674,7 +674,6 @@ function OpenAISetupControls({ selectedModelHealth }) {
     "OLLAMA_BASE_URL=http://localhost:11434/v1",
     "LLM_MODEL=gpt-4.1-mini",
     "USE_LLM=true",
-    "USE_PRACTICE_ANSWER_KEY=false",
   ].join("\n");
 
   async function copyText(text, label) {

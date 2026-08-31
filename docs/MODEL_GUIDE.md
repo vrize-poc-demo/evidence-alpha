@@ -6,9 +6,12 @@ The app does not train or fine-tune any model. It uses retrieval-augmented gener
 
 1. Search all indexed SEC filings.
 2. Select the strongest evidence chunks.
-3. Send the question, active-chat context, and evidence to the selected model.
-4. Ask the model to answer only from the supplied evidence.
-5. Return citations with document and page details.
+3. Add reusable financial-analysis style examples for formulas and answer structure.
+4. Send the question, active-chat context, style examples, and evidence to the selected model.
+5. Ask the model to answer only from the supplied evidence.
+6. Return citations with document and page details.
+
+The style examples are not answer keys. They describe methods such as capex/revenue, quick ratio, ROA, operating margin, and inventory turnover. They do not contain the benchmark answers.
 
 ## Recommended Default
 
@@ -113,6 +116,17 @@ Observed local testing:
 - Qwen3 14B passed the first practice-question UI smoke test.
 - A prior interrupted 3-question local run had 1 correct answer and 2 UI/model timeouts.
 - It is the best free local option in this project, but OpenAI GPT-4.1 mini remains the safer judged-accuracy mode.
+
+## Launch-Time Learning
+
+The app does not fine-tune Qwen3 14B when it starts. Instead, launch-time learning means:
+
+1. build or load the filing index
+2. retrieve relevant filing evidence for each question
+3. add general finance style examples to the prompt
+4. ask Qwen3 14B to answer only from cited evidence
+
+This is an honest RAG pattern. It improves behavior without hiding benchmark answers in the model path.
 
 Setup:
 
