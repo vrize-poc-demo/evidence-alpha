@@ -1,0 +1,12 @@
+{
+  "name": "evidence-alpha-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "eval:ui": "node scripts/ui_practice_eval.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.46.0"
+  }
+}

@@ -45,6 +45,65 @@ Latest local result:
 build completed successfully
 ```
 
+## Practice Question UI Evaluation
+
+The repository includes a Playwright evaluator that drives the app through the browser UI, asks the FinanceBench-style practice questions, scores each answer, and writes JSON plus Markdown reports.
+
+Install the evaluator dependencies once from the project root:
+
+```bash
+npm install
+npx playwright install chromium
+```
+
+Run a quick UI smoke test:
+
+```bash
+npm run eval:ui -- --limit 1 --model local-qwen3-14b --out reports/practice-ui-smoke.json
+```
+
+Run against `llama3.1`:
+
+```bash
+npm run eval:ui -- --model local-llama3.1 --timeout-ms 150000 --out reports/practice-ui-llama3.1-full.json
+```
+
+Run against `qwen3:14b`:
+
+```bash
+npm run eval:ui -- --model local-qwen3-14b --timeout-ms 300000 --out reports/practice-ui-qwen3-14b-full.json
+```
+
+Run against OpenAI GPT-4.1 mini:
+
+```bash
+npm run eval:ui -- --model openai-gpt-4.1-mini --timeout-ms 120000 --out reports/practice-ui-openai-gpt-4.1-mini-full.json
+```
+
+The evaluator starts a fresh chat for every practice question, asks through the same UI a user sees, reads the displayed answer card, and checks:
+
+- expected answer match
+- expected filing match
+- expected evidence page match
+- not-found or abstention behavior
+- UI timeout or browser errors
+
+Scoring:
+
+- `+1` for correct answer with correct filing/page evidence
+- `0` for correct answer with wrong evidence location
+- `0` for not-found or abstained
+- `-1` for wrong answer
+- `-1` for UI/timeout error
+
+Latest local UI evaluation notes:
+
+- `qwen3:14b` smoke test passed `1/1`, scoring `1/1`.
+- `llama3.1` partial full run reached `53/136`, scoring `-13/53`.
+- In that partial run, `llama3.1` produced `19` correct answers, `24` wrong answers, `2` abstentions, and `8` UI/timeout errors.
+- The timeout errors started repeating around the Best Buy filings, so the run was stopped instead of waiting several more hours on the local machine.
+- Detailed output is written under `reports/`.
+
 ## Manual Browser Test
 
 Use this checklist before a reviewer demo:

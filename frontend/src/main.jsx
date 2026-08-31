@@ -371,7 +371,7 @@ function TopNav({ page, setPage, startNewChat }) {
         {items.map(([key, Icon, label]) => (
           <button className={page === key ? "active" : ""} key={key} onClick={() => setPage(key)}>
             <Icon size={18} />
-            <span>{label}</span>
+            <span data-testid={`nav-${key}`}>{label}</span>
           </button>
         ))}
       </nav>
@@ -1025,7 +1025,7 @@ function ChatPage({ filings, selectedModel, session, askQuestion, startNewChat }
     <section className="page chatPage">
       <div className="chatLayout">
         <aside className="chatTools">
-          <button className="secondaryAction" onClick={startNewChat}><Plus size={18} /> New chat</button>
+          <button className="secondaryAction" data-testid="new-chat" onClick={startNewChat}><Plus size={18} /> New chat</button>
           <div className="scopeBox">
             <span>Scope</span>
             <strong>All uploaded filings</strong>
@@ -1074,7 +1074,7 @@ function ChatPage({ filings, selectedModel, session, askQuestion, startNewChat }
             )}
             {session.messages.map((message, index) =>
               message.role === "user" ? (
-                <div className="bubble user" key={index}>{message.text}</div>
+                <div className="bubble user" data-testid="user-message" key={index}>{message.text}</div>
               ) : (
                 <AnswerCard key={index} data={message.data} />
               )
@@ -1084,11 +1084,12 @@ function ChatPage({ filings, selectedModel, session, askQuestion, startNewChat }
           <form className="ask" onSubmit={submit}>
             <Search size={19} />
             <input
+              data-testid="question-input"
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
               placeholder="Ask about revenue, capex, operating margin, balance sheet items..."
             />
-            <button disabled={asking || !filings.length}>Ask</button>
+            <button data-testid="ask-submit" disabled={asking || !filings.length}>Ask</button>
           </form>
         </div>
       </div>
@@ -1126,16 +1127,24 @@ function HistoryPage({ sessions, openSession, startNewChat }) {
 
 function AnswerCard({ data }) {
   return (
-    <article className={`answer ${data.status}`}>
+    <article
+      className={`answer ${data.status}`}
+      data-testid="answer-card"
+      data-status={data.status}
+      data-document={data.document || ""}
+      data-page={data.page || ""}
+      data-confidence={data.confidence || 0}
+      data-model={data.model_used || ""}
+    >
       <div className="answerTop">
-        <span>{data.status === "answered" ? "Answered" : "Not found"}</span>
+        <span data-testid="answer-status">{data.status === "answered" ? "Answered" : "Not found"}</span>
         <strong>{Math.round((data.confidence || 0) * 100)}% confidence</strong>
       </div>
       {data.model_used && <p className="model">Model: {data.model_used}</p>}
-      <p className="answerText">{data.answer}</p>
+      <p className="answerText" data-testid="answer-text">{data.answer}</p>
       {data.calculation && <p className="calc">{data.calculation}</p>}
       {data.document && (
-        <p className="cite">
+        <p className="cite" data-testid="answer-citation">
           Source: {data.document}{data.page ? `, page ${data.page}` : ""}
         </p>
       )}
