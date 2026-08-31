@@ -16,16 +16,16 @@ Open `http://127.0.0.1:5173`.
 2. Show the dashboard metrics and model status.
 3. Open Upload and select one or many `.htm` filings.
 4. Show the global processor status.
-5. Open Ask, select `3M_2022_10K`, and choose the model from the dropdown.
+5. Open Ask and choose the model from the dropdown. The scope should show all uploaded filings.
 6. Ask: `Is 3M a capital-intensive business based on FY2022 data?`
 7. Show the answer, source document, page, and evidence drawer.
 8. Open History and show the saved chat.
-9. Ask an unsupported or vague question and show `Not found in this filing.`
+9. Ask an unsupported or vague question and show `Not found in the indexed filings.`
 
 ## Talking Points
 
 - The product does not just answer; it proves where the answer came from.
 - The LLM answers only after the backend retrieves filing evidence.
 - Optional benchmark mode can show exact expected outputs, but normal mode uses the LLM.
-- For unseen questions, it searches the selected filing and declines weak evidence.
+- For unseen questions, it searches all indexed filings and declines weak evidence.
 - The next production step is hybrid retrieval plus LLM verification.

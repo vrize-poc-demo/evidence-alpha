@@ -74,7 +74,7 @@ def answer_with_llm(question: str, results: list[tuple[Chunk, float]], model_cho
     if not results:
         return {
             "status": "not_found",
-            "answer": "Not found in this filing.",
+            "answer": "Not found in the indexed filings.",
             "confidence": 0.0,
             "calculation": None,
         }
@@ -157,7 +157,7 @@ def answer_with_llm(question: str, results: list[tuple[Chunk, float]], model_cho
 
     return {
         "status": status,
-        "answer": parsed.get("answer") or "Not found in this filing.",
+        "answer": parsed.get("answer") or "Not found in the indexed filings.",
         "confidence": max(0.0, min(confidence, 1.0)),
         "model_used": label,
         "evidence_id": parsed.get("evidence_id"),

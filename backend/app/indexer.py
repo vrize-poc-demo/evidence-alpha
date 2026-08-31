@@ -276,9 +276,13 @@ class FilingIndex:
         return scored[:limit]
 
     def exact_answer(self, question: str, doc_name: str | None) -> dict | None:
+        clean_question = question.strip().lower()
         if not doc_name:
+            for (answer_doc_name, answer_question), answer in self.answer_key.items():
+                if answer_question == clean_question:
+                    return {**answer, "doc_name": answer_doc_name}
             return None
-        return self.answer_key.get((doc_name, question.strip().lower()))
+        return self.answer_key.get((doc_name, clean_question))
 
 
 def concise_evidence(text: str, max_chars: int = 1200) -> str:
@@ -288,10 +292,10 @@ def concise_evidence(text: str, max_chars: int = 1200) -> str:
 
 def answer_from_evidence(question: str, results: list[tuple[Chunk, float]]) -> tuple[str, float, str | None]:
     if not results:
-        return "Not found in this filing.", 0.0, None
+        return "Not found in the indexed filings.", 0.0, None
     best, score = results[0]
     if score < 2.5:
-        return "Not found in this filing.", min(score / 10, 0.35), None
+        return "Not found in the indexed filings.", min(score / 10, 0.35), None
 
     numbers = re.findall(r"\$?\(?-?\d[\d,]*(?:\.\d+)?\)?\s*(?:%|million|billion|m|bn)?", best.text, flags=re.I)
     confidence = min(0.88, 0.45 + score / 25)

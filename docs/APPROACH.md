@@ -8,14 +8,14 @@ Analysts need to ask plain-English questions over long SEC filings and receive p
 
 Evidence Alpha is a React + FastAPI demo app with:
 
-- filing selection
+- all-filings search
 - filing upload
 - local SEC HTML parsing
 - local indexing
 - LLM answer generation
 - analyst chat
 - cited evidence
-- conservative `Not found in this filing` behavior
+- conservative `Not found in the indexed filings` behavior
 
 ## Why HTML Parsing
 

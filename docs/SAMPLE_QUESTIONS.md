@@ -70,7 +70,7 @@ Operating margin decreased, driven by gross margin pressure and special items su
 
 ## Not Found Check
 
-Use a question that is not supported by the selected filing:
+Use a question that is not supported by the indexed filings:
 
 ```text
 What was 3M's revenue from its Mars operations in FY2022?
@@ -79,5 +79,5 @@ What was 3M's revenue from its Mars operations in FY2022?
 Expected behavior:
 
 ```text
-Not found in this filing.
+Not found in the indexed filings.
 ```

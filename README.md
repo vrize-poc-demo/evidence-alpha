@@ -8,7 +8,7 @@ Evidence Alpha is a React + FastAPI proof-of-solution app for answering analyst 
 - Small bottom status bar with backend, index, processor, OpenAI, and local Ollama health
 - Single and multiple SEC filing upload
 - Global processing status for uploaded files
-- Ask page with filing selector, model selector, and LLM-backed answers
+- Ask page searches all uploaded/indexed filings with model selector and LLM-backed answers
 - Browser chat history across sessions
 - Evidence drawer with document/page citations
 - Local SEC HTML indexing from the copied dataset
@@ -143,7 +143,7 @@ If the reviewer does not provide an API key, the app still starts, loads filings
 
 ## LLM Configuration
 
-This app uses an LLM for answer generation after the backend retrieves evidence from the selected filing. It does not train or fine-tune a model.
+This app uses an LLM for answer generation after the backend retrieves evidence from all uploaded/indexed filings. It does not train or fine-tune a model.
 
 Create a backend environment file:
 
@@ -255,11 +255,11 @@ http://localhost:5173
 2. Open the dashboard.
 3. Upload one or many SEC `.htm` or `.html` filings.
 4. Watch the global processor.
-5. Open Ask, select a filing and model.
+5. Open Ask and select the answer model.
 6. Ask an analyst question.
 7. Review the answer, confidence, source document, page number, and evidence.
 
-By default, every question retrieves filing evidence and sends only that evidence to the configured LLM. If the evidence is weak, the LLM is instructed to return `Not found in this filing.`
+By default, every question retrieves evidence across all indexed filings and sends only that evidence to the configured LLM. If the evidence is weak, the LLM is instructed to return `Not found in the indexed filings.`
 
 For a controlled benchmark demo, you can set `USE_PRACTICE_ANSWER_KEY=true`. That mode returns exact answer-key responses for questions that match `practice-questions.jsonl`, but it should stay disabled when demonstrating real LLM behavior.
 

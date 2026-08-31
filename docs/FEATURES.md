@@ -20,7 +20,7 @@ The Upload page supports:
 - background processing for each file
 - global status updates
 
-Each uploaded file is parsed, chunked, indexed, and then added to the filing selector.
+Each uploaded file is parsed, chunked, indexed, and then included in all future chat searches.
 
 ## Global Processor
 
@@ -39,7 +39,7 @@ The frontend polls `GET /processor` so the user can move around the app while fi
 
 The Ask page supports:
 
-- filing selection
+- all uploaded/indexed filing search
 - model selection
 - sample questions
 - evidence-backed answers
@@ -58,7 +58,7 @@ Chat history is stored in browser local storage. This keeps the demo simple and 
 Each history item stores:
 
 - chat title
-- selected filing
+- all-filings search scope
 - messages
 - last updated time
 

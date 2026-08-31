@@ -30,7 +30,6 @@ function App() {
   const [health, setHealth] = useState(null);
   const [serviceHealth, setServiceHealth] = useState(null);
   const [healthLoading, setHealthLoading] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState("");
   const [selectedModel, setSelectedModel] = useState("openai-gpt-4.1-mini");
   const [appError, setAppError] = useState("");
   const [sessions, setSessions] = useState(loadSessions);
@@ -53,10 +52,6 @@ function App() {
   useEffect(() => {
     window.localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions));
   }, [sessions]);
-
-  useEffect(() => {
-    if (!selectedDoc && filings.length) setSelectedDoc(filings[0].doc_name);
-  }, [filings, selectedDoc]);
 
   async function fetchHealth() {
     try {
@@ -139,12 +134,12 @@ function App() {
 
   async function askQuestion(question) {
     const clean = question.trim();
-    if (!clean || !selectedDoc) return;
+    if (!clean) return;
 
     upsertActiveSession((session) => ({
       ...session,
       title: session.title === "New chat" ? clean.slice(0, 70) : session.title,
-      docName: selectedDoc,
+      docName: "All uploaded filings",
       updatedAt: new Date().toISOString(),
       messages: [...session.messages, { role: "user", text: clean }],
     }));
@@ -154,7 +149,7 @@ function App() {
       data = await apiJson("/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: clean, doc_name: selectedDoc, model_choice: selectedModel }),
+        body: JSON.stringify({ question: clean, doc_name: null, model_choice: selectedModel }),
       });
     } catch (error) {
       data = {
@@ -212,8 +207,6 @@ function App() {
       {page === "chat" && (
         <ChatPage
           filings={filings}
-          selectedDoc={selectedDoc}
-          setSelectedDoc={setSelectedDoc}
           selectedModel={selectedModel}
           setSelectedModel={setSelectedModel}
           session={activeSession}
@@ -517,23 +510,20 @@ function UploadPage({ fetchFilings, fetchProcessor, processorJobs, setProcessorJ
   );
 }
 
-function ChatPage({ filings, selectedDoc, setSelectedDoc, selectedModel, setSelectedModel, session, askQuestion, startNewChat }) {
+function ChatPage({ filings, selectedModel, setSelectedModel, session, askQuestion, startNewChat }) {
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState(false);
   const localModelSelected = selectedModel.startsWith("local-");
 
   const samples = [
     {
-      doc: "3M_2018_10K",
       question:
         "What is the FY2018 capital expenditure amount (in USD millions) for 3M? Give a response to the question by relying on the details shown in the cash flow statement.",
     },
     {
-      doc: "3M_2022_10K",
       question: "Is 3M a capital-intensive business based on FY2022 data?",
     },
     {
-      doc: "3M_2022_10K",
       question:
         "What drove operating margin change as of FY2022 for 3M? If operating margin is not a useful metric for a company like this, then please state that and explain why.",
     },
@@ -557,14 +547,11 @@ function ChatPage({ filings, selectedDoc, setSelectedDoc, selectedModel, setSele
       <div className="chatLayout">
         <aside className="chatTools">
           <button className="secondaryAction" onClick={startNewChat}><Plus size={18} /> New chat</button>
-          <label>
-            <span>Filing</span>
-            <select value={selectedDoc} onChange={(event) => setSelectedDoc(event.target.value)}>
-              {filings.map((filing) => (
-                <option key={filing.doc_name} value={filing.doc_name}>{filing.doc_name}</option>
-              ))}
-            </select>
-          </label>
+          <div className="scopeBox">
+            <span>Scope</span>
+            <strong>All uploaded filings</strong>
+            <small>{filings.length} indexed filing(s) will be searched for every question.</small>
+          </div>
           <label>
             <span>Model</span>
             <select value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)}>
@@ -589,7 +576,6 @@ function ChatPage({ filings, selectedDoc, setSelectedDoc, selectedModel, setSele
               <button
                 key={sample.question}
                 onClick={() => {
-                  setSelectedDoc(sample.doc);
                   setQuestion(sample.question);
                 }}
               >
@@ -631,7 +617,7 @@ function ChatPage({ filings, selectedDoc, setSelectedDoc, selectedModel, setSele
               onChange={(event) => setQuestion(event.target.value)}
               placeholder="Ask about revenue, capex, operating margin, balance sheet items..."
             />
-            <button disabled={asking || !selectedDoc}>Ask</button>
+            <button disabled={asking || !filings.length}>Ask</button>
           </form>
         </div>
       </div>
@@ -657,7 +643,7 @@ function HistoryPage({ sessions, openSession, startNewChat }) {
             <MessageSquare size={20} />
             <span>
               <strong>{session.title}</strong>
-              <small>{session.docName || "No filing selected"} · {session.messages.length} message(s)</small>
+              <small>{session.docName || "All uploaded filings"} · {session.messages.length} message(s)</small>
             </span>
             <time>{new Date(session.updatedAt).toLocaleString()}</time>
           </button>

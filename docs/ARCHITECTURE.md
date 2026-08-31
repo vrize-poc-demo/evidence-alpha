@@ -52,8 +52,8 @@ sequenceDiagram
     participant L as LLM
 
     U->>UI: Ask question
-    UI->>API: POST /ask with filing and model choice
-    API->>R: Search selected filing
+    UI->>API: POST /ask with model choice
+    API->>R: Search all indexed filings
     R-->>API: Evidence chunks with pages
     API->>L: Question plus evidence only
     L-->>API: JSON answer or not_found
@@ -117,7 +117,7 @@ This demo uses a lightweight local index so it can run without external infrastr
 The current search uses a BM25-like keyword score:
 
 - tokenize the question
-- search only the selected filing when one is selected
+- search all indexed filings, including files uploaded during the demo
 - score chunks by query-token overlap and inverse document frequency
 - return the top evidence chunks
 
@@ -131,7 +131,7 @@ There are two paths:
    - Retrieve top evidence chunks.
    - Send only those chunks plus the question to the configured LLM.
    - The LLM must return JSON with answer, confidence, status, evidence id, and calculation.
-   - If the evidence is weak, return `Not found in this filing.`
+   - If the evidence is weak, return `Not found in the indexed filings.`
 
 2. Optional benchmark mode:
    - If `USE_PRACTICE_ANSWER_KEY=true`, exact practice questions can return the supplied benchmark answer and evidence.
@@ -155,7 +155,7 @@ React provides a demo-friendly analyst workspace:
 
 - top navigation
 - dashboard
-- filing selector
+- all-filings search scope
 - single and multiple filing upload
 - global processor status
 - sample questions

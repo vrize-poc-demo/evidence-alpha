@@ -596,11 +596,31 @@ button {
 }
 
 .chatTools label span,
-.sampleList strong {
+.sampleList strong,
+.scopeBox span {
   color: #52645b;
   font-size: 13px;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.scopeBox {
+  display: grid;
+  gap: 6px;
+  background: #f7faf8;
+  border: 1px solid #dfe6dd;
+  border-radius: 7px;
+  padding: 12px;
+}
+
+.scopeBox strong {
+  color: #1d3a40;
+  font-size: 16px;
+}
+
+.scopeBox small {
+  color: #607169;
+  line-height: 1.4;
 }
 
 select {

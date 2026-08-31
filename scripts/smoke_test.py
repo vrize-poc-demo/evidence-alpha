@@ -83,11 +83,22 @@ def main() -> None:
             },
         ).json()
         assert_ok(answer["status"] == "answered", f"{case['doc_name']} sample should be answered")
-        assert_ok(answer["document"] == case["doc_name"], "sample answer should cite the selected filing")
+        assert_ok(answer["document"] == case["doc_name"], "sample answer should cite the expected filing")
         assert_ok(answer["page"] == case["page"], f"sample answer should cite page {case['page']}")
         assert_ok(case["answer_contains"] in answer["answer"], "sample answer should contain expected text")
         assert_ok(answer["evidence"], "sample answer should include evidence")
         sample_answers.append(answer)
+
+    all_filing_answer = client.post(
+        "/ask",
+        json={
+            "doc_name": None,
+            "model_choice": "openai-gpt-4.1-mini",
+            "question": SAMPLE_CASES[1]["question"],
+        },
+    ).json()
+    assert_ok(all_filing_answer["status"] == "answered", "all-filing search should answer known questions")
+    assert_ok(all_filing_answer["document"] == "3M_2018_10K", "all-filing search should cite the matching filing")
 
     not_found = client.post(
         "/ask",
