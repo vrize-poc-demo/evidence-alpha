@@ -83,3 +83,14 @@ class LocalModelStatusResponse(BaseModel):
     ollama_running: bool
     installed_models: list[str] = []
     jobs: list[LocalModelJob] = []
+
+
+class DeleteDocumentsRequest(BaseModel):
+    confirmation: str
+
+
+class DeleteDocumentsResponse(BaseModel):
+    status: str
+    deleted_documents: int
+    deleted_chunks: int
+    message: str

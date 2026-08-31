@@ -226,6 +226,18 @@ class FilingIndex:
         self.save()
         return len(new_chunks)
 
+    def clear_documents(self) -> tuple[int, int]:
+        deleted_documents = len(self.by_doc)
+        deleted_chunks = len(self.chunks)
+        self.chunks = []
+        self._refresh()
+        self.save()
+
+        if UPLOAD_DIR.exists():
+            shutil.rmtree(UPLOAD_DIR)
+            UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        return deleted_documents, deleted_chunks
+
     def _refresh(self) -> None:
         self.doc_freq = Counter()
         self.by_doc = defaultdict(list)

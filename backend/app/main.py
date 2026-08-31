@@ -24,6 +24,8 @@ from .llm import MODEL_CHOICES, answer_with_llm, llm_enabled, model_name, provid
 from .models import (
     AskRequest,
     AskResponse,
+    DeleteDocumentsRequest,
+    DeleteDocumentsResponse,
     Evidence,
     FilingSummary,
     LocalModelActionRequest,
@@ -390,6 +392,24 @@ def processor_status() -> list[ProcessingJob]:
         jobs = list(processor_jobs.values())
     jobs.sort(key=lambda item: item.job_id, reverse=True)
     return jobs[:50]
+
+
+@app.post("/documents/delete-all", response_model=DeleteDocumentsResponse)
+def delete_all_documents(payload: DeleteDocumentsRequest) -> DeleteDocumentsResponse:
+    if payload.confirmation != "DELETE":
+        raise HTTPException(status_code=400, detail="Type DELETE to confirm document deletion")
+
+    with index_lock:
+        deleted_documents, deleted_chunks = index.clear_documents()
+    with processor_lock:
+        processor_jobs.clear()
+
+    return DeleteDocumentsResponse(
+        status="deleted",
+        deleted_documents=deleted_documents,
+        deleted_chunks=deleted_chunks,
+        message="All indexed documents and uploaded files were deleted from the active app index.",
+    )
 
 
 @app.post("/ask", response_model=AskResponse)

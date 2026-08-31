@@ -529,6 +529,124 @@ button {
   cursor: wait;
 }
 
+.dangerZone {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #f0c7c1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.dangerZone h3 {
+  margin: 0 0 5px;
+  color: #7b2018;
+}
+
+.dangerZone p {
+  margin: 0;
+  color: #78534e;
+  line-height: 1.45;
+}
+
+.dangerAction {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #bd3f35;
+  border-radius: 7px;
+  background: #bd3f35;
+  color: #ffffff;
+  font-weight: 900;
+  padding: 0 14px;
+}
+
+.dangerAction:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.dangerMessage {
+  grid-column: 1 / -1;
+  background: #fff2f0;
+  border-color: #efaaa2;
+  color: #8b2b23;
+}
+
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(22, 31, 28, 0.48);
+}
+
+.confirmDialog {
+  position: relative;
+  width: min(460px, 100%);
+  border: 1px solid #efaaa2;
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 22px 60px rgba(22, 31, 28, 0.24);
+  padding: 24px;
+}
+
+.confirmDialog svg {
+  color: #bd3f35;
+}
+
+.confirmDialog h3 {
+  margin: 10px 0 8px;
+  color: #7b2018;
+  font-size: 22px;
+}
+
+.confirmDialog p {
+  color: #5f6f67;
+  line-height: 1.5;
+  margin: 0 0 14px;
+}
+
+.confirmDialog input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid #cbd8d0;
+  border-radius: 7px;
+  padding: 0 12px;
+  font-weight: 800;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.iconButton {
+  width: 36px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dfe6dd;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #1b3b32;
+}
+
+.closeButton {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
+
 .uploadSurface {
   padding: 22px;
   display: grid;
@@ -979,5 +1097,13 @@ summary {
 
   .modelAction {
     grid-template-columns: 1fr;
+  }
+
+  .dangerZone {
+    grid-template-columns: 1fr;
+  }
+
+  .dangerAction {
+    width: 100%;
   }
 }

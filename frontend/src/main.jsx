@@ -16,7 +16,10 @@ import {
   Search,
   ShieldCheck,
   Signal,
+  Trash2,
+  TriangleAlert,
   UploadCloud,
+  X,
 } from "lucide-react";
 import "./styles.css";
 
@@ -155,6 +158,21 @@ function App() {
     setProcessorJobs(jobs);
   }
 
+  async function deleteAllDocuments(confirmation) {
+    const data = await apiJson("/documents/delete-all", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ confirmation }),
+    });
+    setFilings([]);
+    setProcessorJobs([]);
+    setSessions([]);
+    window.localStorage.removeItem(HISTORY_KEY);
+    await fetchServiceHealth();
+    await fetchHealth();
+    return data;
+  }
+
   function upsertActiveSession(updater) {
     setSessions((items) => {
       const existing = items.find((session) => session.id === activeSessionId);
@@ -272,7 +290,13 @@ function App() {
           serviceHealth={serviceHealth}
           fetchServiceHealth={fetchServiceHealth}
           healthLoading={healthLoading}
+          localModelStatus={localModelStatus}
+          fetchLocalModelStatus={fetchLocalModelStatus}
+          startLocalModels={startLocalModels}
+          downloadLocalModel={downloadLocalModel}
+          localActionMessage={localActionMessage}
           selectedModel={selectedModel}
+          deleteAllDocuments={deleteAllDocuments}
         />
       )}
       <HealthBar serviceHealth={serviceHealth} healthLoading={healthLoading} setPage={setPage} />
@@ -403,6 +427,7 @@ function HealthPage({
   downloadLocalModel,
   localActionMessage,
   selectedModel,
+  deleteAllDocuments,
 }) {
   return (
     <section className="page">
@@ -427,6 +452,7 @@ function HealthPage({
         downloadLocalModel={downloadLocalModel}
         localActionMessage={localActionMessage}
         selectedModel={selectedModel}
+        deleteAllDocuments={deleteAllDocuments}
         expanded
       />
     </section>
@@ -444,10 +470,31 @@ function HealthSummary({
   downloadLocalModel,
   localActionMessage,
   selectedModel,
+  deleteAllDocuments,
   expanded = false,
 }) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState("");
+  const [deleteMessage, setDeleteMessage] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const services = serviceHealth?.services || [];
   const overall = serviceHealth?.status || "checking";
+
+  async function submitDelete() {
+    setDeleting(true);
+    setDeleteMessage("");
+    try {
+      const data = await deleteAllDocuments(confirmation);
+      setDeleteMessage(`${data.deleted_documents} document(s) and ${data.deleted_chunks} evidence chunk(s) deleted.`);
+      setConfirmOpen(false);
+      setConfirmation("");
+    } catch (error) {
+      setDeleteMessage(error.message);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   return (
     <section className={`workspacePanel healthPanel ${expanded ? "wide" : ""}`}>
       <div className="panelTitle">
@@ -491,6 +538,48 @@ function HealthSummary({
           actionMessage={localActionMessage}
           selectedModel={selectedModel}
         />
+      )}
+      {expanded && deleteAllDocuments && (
+        <section className="dangerZone">
+          <div>
+            <h3>Document Reset</h3>
+            <p>Delete all indexed documents, uploaded files, processor jobs, and local chat history for this browser.</p>
+          </div>
+          <button className="dangerAction" onClick={() => setConfirmOpen(true)}>
+            <Trash2 size={18} />
+            Delete all documents
+          </button>
+          {deleteMessage && <div className="uploadMessage dangerMessage">{deleteMessage}</div>}
+        </section>
+      )}
+      {confirmOpen && (
+        <div className="modalBackdrop" role="presentation">
+          <section className="confirmDialog" role="dialog" aria-modal="true" aria-labelledby="delete-documents-title">
+            <button className="iconButton closeButton" onClick={() => setConfirmOpen(false)} aria-label="Close dialog">
+              <X size={18} />
+            </button>
+            <TriangleAlert size={34} />
+            <h3 id="delete-documents-title">Delete all documents?</h3>
+            <p>
+              This clears the active app index and uploaded files. Type <strong>DELETE</strong> to confirm.
+            </p>
+            <input
+              autoFocus
+              value={confirmation}
+              onChange={(event) => setConfirmation(event.target.value)}
+              placeholder="Type DELETE"
+            />
+            <div className="dialogActions">
+              <button className="secondaryAction" onClick={() => setConfirmOpen(false)} disabled={deleting}>
+                Cancel
+              </button>
+              <button className="dangerAction" onClick={submitDelete} disabled={confirmation !== "DELETE" || deleting}>
+                <Trash2 size={18} />
+                {deleting ? "Deleting..." : "Delete documents"}
+              </button>
+            </div>
+          </section>
+        </div>
       )}
     </section>
   );
