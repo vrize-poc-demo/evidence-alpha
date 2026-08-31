@@ -2,6 +2,16 @@
 
 Evidence Alpha is a React + FastAPI proof-of-solution app for answering analyst questions over SEC annual and quarterly filings. It is designed for the Analyst Copilot challenge: every answer must include supporting evidence from the filing, and unsupported questions should be declined.
 
+## Features
+
+- Dashboard page with top navigation
+- Single and multiple SEC filing upload
+- Global processing status for uploaded files
+- Ask page with filing selector and LLM-backed answers
+- Browser chat history across sessions
+- Evidence drawer with document/page citations
+- Local SEC HTML indexing from the copied dataset
+
 ## Project Structure
 
 ```text
@@ -196,7 +206,9 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for a 1-2 week hosted demo path usi
 
 - `GET /health` - service status
 - `GET /filings` - indexed filings
+- `GET /processor` - global upload/indexing processor status
 - `POST /filings/upload` - upload and index a new filing
+- `POST /filings/upload-multiple` - upload and process many filings
 - `POST /ask` - ask a question
 
 Example:

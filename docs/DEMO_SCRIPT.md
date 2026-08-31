@@ -22,11 +22,14 @@ Open `http://localhost:5173`.
 ## Demo Story
 
 1. Show indexed SEC filings in the left panel.
-2. Select `3M_2022_10K`.
-3. Ask: `Is 3M a capital-intensive business based on FY2022 data?`
-4. Show the answer, source document, page, and evidence drawer.
-5. Ask an unsupported or vague question and show `Not found in this filing.`
-6. Upload a new `.htm` filing and show that it gets indexed.
+2. Show the dashboard metrics and model status.
+3. Open Upload and select one or many `.htm` filings.
+4. Show the global processor status.
+5. Open Ask, select `3M_2022_10K`.
+6. Ask: `Is 3M a capital-intensive business based on FY2022 data?`
+7. Show the answer, source document, page, and evidence drawer.
+8. Open History and show the saved chat.
+9. Ask an unsupported or vague question and show `Not found in this filing.`
 
 ## Talking Points
 

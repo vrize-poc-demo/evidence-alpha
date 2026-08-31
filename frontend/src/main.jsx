@@ -1,68 +1,322 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { FileUp, MessageSquare, Search, ShieldCheck } from "lucide-react";
+import {
+  BarChart3,
+  CheckCircle2,
+  Clock3,
+  FileSearch,
+  FileUp,
+  History,
+  LayoutDashboard,
+  MessageSquare,
+  Plus,
+  Search,
+  ShieldCheck,
+  UploadCloud,
+} from "lucide-react";
 import "./styles.css";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API = import.meta.env.VITE_API_URL || (window.location.port === "5173" ? "http://localhost:8000" : "");
+const HISTORY_KEY = "evidence-alpha-chat-history";
 
 function App() {
+  const [page, setPage] = useState("dashboard");
   const [filings, setFilings] = useState([]);
+  const [processorJobs, setProcessorJobs] = useState([]);
+  const [health, setHealth] = useState(null);
   const [selectedDoc, setSelectedDoc] = useState("");
-  const [question, setQuestion] = useState("");
-  const [messages, setMessages] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [sessions, setSessions] = useState(loadSessions);
+  const [activeSessionId, setActiveSessionId] = useState(() => sessions[0]?.id || createSessionId());
+  const completedJobCount = useRef(0);
 
   useEffect(() => {
+    fetchHealth();
     fetchFilings();
+    fetchProcessor();
+    const timer = window.setInterval(fetchProcessor, 3000);
+    return () => window.clearInterval(timer);
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions));
+  }, [sessions]);
+
+  useEffect(() => {
+    if (!selectedDoc && filings.length) setSelectedDoc(filings[0].doc_name);
+  }, [filings, selectedDoc]);
+
+  async function fetchHealth() {
+    const response = await fetch(`${API}/health`);
+    setHealth(await response.json());
+  }
 
   async function fetchFilings() {
     const response = await fetch(`${API}/filings`);
-    const data = await response.json();
-    setFilings(data);
-    if (!selectedDoc && data.length) setSelectedDoc(data[0].doc_name);
+    setFilings(await response.json());
   }
 
-  async function uploadFiling(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  async function fetchProcessor() {
+    const response = await fetch(`${API}/processor`);
+    if (!response.ok) return;
+    const jobs = await response.json();
+    const completeCount = jobs.filter((job) => job.status === "complete").length;
+    if (completeCount > completedJobCount.current) {
+      completedJobCount.current = completeCount;
+      fetchFilings();
+    }
+    setProcessorJobs(jobs);
+  }
+
+  function upsertActiveSession(updater) {
+    setSessions((items) => {
+      const existing = items.find((session) => session.id === activeSessionId);
+      if (!existing) {
+        const updated = updater(newSession(activeSessionId));
+        return [updated, ...items];
+      }
+      return items.map((session) => (session.id === activeSessionId ? updater(session) : session));
+    });
+  }
+
+  function startNewChat() {
+    const session = newSession();
+    setSessions((items) => [session, ...items]);
+    setActiveSessionId(session.id);
+    setPage("chat");
+  }
+
+  function openSession(sessionId) {
+    setActiveSessionId(sessionId);
+    setPage("chat");
+  }
+
+  async function askQuestion(question) {
+    const clean = question.trim();
+    if (!clean || !selectedDoc) return;
+
+    upsertActiveSession((session) => ({
+      ...session,
+      title: session.title === "New chat" ? clean.slice(0, 70) : session.title,
+      docName: selectedDoc,
+      updatedAt: new Date().toISOString(),
+      messages: [...session.messages, { role: "user", text: clean }],
+    }));
+
+    const response = await fetch(`${API}/ask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question: clean, doc_name: selectedDoc }),
+    });
+    const data = await response.json();
+
+    upsertActiveSession((session) => ({
+      ...session,
+      updatedAt: new Date().toISOString(),
+      messages: [...session.messages, { role: "assistant", data }],
+    }));
+  }
+
+  const activeSession = sessions.find((session) => session.id === activeSessionId) || newSession(activeSessionId);
+  const activeJobs = processorJobs.filter((job) => job.status === "queued" || job.status === "processing");
+  const completedJobs = processorJobs.filter((job) => job.status === "complete");
+  const failedJobs = processorJobs.filter((job) => job.status === "failed");
+
+  return (
+    <main className="appShell">
+      <TopNav page={page} setPage={setPage} startNewChat={startNewChat} />
+      <GlobalProcessor jobs={processorJobs} activeJobs={activeJobs} />
+
+      {page === "dashboard" && (
+        <Dashboard
+          filings={filings}
+          health={health}
+          sessions={sessions}
+          activeJobs={activeJobs}
+          completedJobs={completedJobs}
+          failedJobs={failedJobs}
+          setPage={setPage}
+        />
+      )}
+
+      {page === "upload" && <UploadPage fetchFilings={fetchFilings} fetchProcessor={fetchProcessor} setPage={setPage} />}
+
+      {page === "chat" && (
+        <ChatPage
+          filings={filings}
+          selectedDoc={selectedDoc}
+          setSelectedDoc={setSelectedDoc}
+          session={activeSession}
+          askQuestion={askQuestion}
+          startNewChat={startNewChat}
+        />
+      )}
+
+      {page === "history" && <HistoryPage sessions={sessions} openSession={openSession} startNewChat={startNewChat} />}
+    </main>
+  );
+}
+
+function TopNav({ page, setPage, startNewChat }) {
+  const items = [
+    ["dashboard", LayoutDashboard, "Dashboard"],
+    ["upload", UploadCloud, "Upload"],
+    ["chat", MessageSquare, "Ask"],
+    ["history", History, "History"],
+  ];
+
+  return (
+    <header className="topNav">
+      <div className="brandMark">
+        <ShieldCheck size={28} />
+        <div>
+          <h1>Evidence Alpha</h1>
+          <p>SEC filing copilot</p>
+        </div>
+      </div>
+      <nav>
+        {items.map(([key, Icon, label]) => (
+          <button className={page === key ? "active" : ""} key={key} onClick={() => setPage(key)}>
+            <Icon size={18} />
+            <span>{label}</span>
+          </button>
+        ))}
+      </nav>
+      <button className="primaryNav" onClick={startNewChat}>
+        <Plus size={18} />
+        <span>New Chat</span>
+      </button>
+    </header>
+  );
+}
+
+function GlobalProcessor({ jobs, activeJobs }) {
+  if (!jobs.length) return null;
+  const latest = jobs[0];
+  return (
+    <section className={`processor ${activeJobs.length ? "busy" : "ready"}`}>
+      <div>
+        {activeJobs.length ? <Clock3 size={20} /> : <CheckCircle2 size={20} />}
+        <strong>{activeJobs.length ? `${activeJobs.length} file(s) processing` : "Processor idle"}</strong>
+        <span>{latest.file_name}: {latest.message}</span>
+      </div>
+      <div className="processorJobs">
+        {jobs.slice(0, 4).map((job) => (
+          <span key={job.job_id} className={job.status}>{job.doc_name}</span>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function Dashboard({ filings, health, sessions, activeJobs, completedJobs, failedJobs, setPage }) {
+  const totalChunks = filings.reduce((sum, filing) => sum + filing.chunk_count, 0);
+  return (
+    <section className="page dashboard">
+      <div className="pageIntro">
+        <p className="eyebrow">Dashboard</p>
+        <h2>Analyst filing workspace</h2>
+        <p>Monitor indexed filings, processing status, model configuration, and recent chat activity.</p>
+      </div>
+
+      <div className="metricGrid">
+        <Metric icon={FileSearch} label="Indexed filings" value={filings.length} />
+        <Metric icon={BarChart3} label="Evidence chunks" value={totalChunks.toLocaleString()} />
+        <Metric icon={Clock3} label="Processing now" value={activeJobs.length} />
+        <Metric icon={MessageSquare} label="Chat sessions" value={sessions.length} />
+      </div>
+
+      <div className="dashboardGrid">
+        <section className="workspacePanel">
+          <h3>Model Status</h3>
+          <dl className="detailList">
+            <div><dt>LLM</dt><dd>{health?.llm_enabled === "true" ? "Enabled" : "Disabled"}</dd></div>
+            <div><dt>Provider</dt><dd>{health?.provider || "Loading"}</dd></div>
+            <div><dt>Model</dt><dd>{health?.model || "Loading"}</dd></div>
+          </dl>
+        </section>
+        <section className="workspacePanel">
+          <h3>Processor</h3>
+          <dl className="detailList">
+            <div><dt>Completed</dt><dd>{completedJobs.length}</dd></div>
+            <div><dt>Failed</dt><dd>{failedJobs.length}</dd></div>
+            <div><dt>Status</dt><dd>{activeJobs.length ? "Working" : "Ready"}</dd></div>
+          </dl>
+        </section>
+        <section className="workspacePanel wide">
+          <h3>Quick Actions</h3>
+          <div className="quickActions">
+            <button onClick={() => setPage("upload")}><FileUp size={18} /> Upload filings</button>
+            <button onClick={() => setPage("chat")}><Search size={18} /> Ask a question</button>
+            <button onClick={() => setPage("history")}><History size={18} /> View chat history</button>
+          </div>
+        </section>
+      </div>
+    </section>
+  );
+}
+
+function Metric({ icon: Icon, label, value }) {
+  return (
+    <article className="metric">
+      <Icon size={22} />
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </article>
+  );
+}
+
+function UploadPage({ fetchFilings, fetchProcessor, setPage }) {
+  const [files, setFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+
+  async function submitUpload(event) {
+    event.preventDefault();
+    if (!files.length) return;
     setUploading(true);
     const formData = new FormData();
-    formData.append("file", file);
+    files.forEach((file) => formData.append("files", file));
     try {
-      await fetch(`${API}/filings/upload`, { method: "POST", body: formData });
+      await fetch(`${API}/filings/upload-multiple`, { method: "POST", body: formData });
+      await fetchProcessor();
       await fetchFilings();
+      setFiles([]);
+      setPage("dashboard");
     } finally {
       setUploading(false);
-      event.target.value = "";
     }
   }
 
-  async function askQuestion(event) {
-    event.preventDefault();
-    const clean = question.trim();
-    if (!clean) return;
-    setMessages((items) => [...items, { role: "user", text: clean }]);
-    setQuestion("");
-    setLoading(true);
-    try {
-      const response = await fetch(`${API}/ask`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: clean, doc_name: selectedDoc }),
-      });
-      const data = await response.json();
-      setMessages((items) => [...items, { role: "assistant", data }]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const selectedFiling = useMemo(
-    () => filings.find((filing) => filing.doc_name === selectedDoc),
-    [filings, selectedDoc]
+  return (
+    <section className="page">
+      <div className="pageIntro">
+        <p className="eyebrow">Upload</p>
+        <h2>Add one or many SEC filings</h2>
+        <p>Upload `.htm` or `.html` filings. The global processor will index them and make them available for chat.</p>
+      </div>
+      <form className="uploadSurface" onSubmit={submitUpload}>
+        <label className="dropZone">
+          <FileUp size={34} />
+          <strong>{files.length ? `${files.length} file(s) selected` : "Choose SEC filing files"}</strong>
+          <span>Single or multiple `.htm` / `.html` files are supported.</span>
+          <input multiple type="file" accept=".htm,.html" onChange={(event) => setFiles(Array.from(event.target.files || []))} />
+        </label>
+        {files.length > 0 && (
+          <div className="selectedFiles">
+            {files.map((file) => <span key={`${file.name}-${file.size}`}>{file.name}</span>)}
+          </div>
+        )}
+        <button className="primaryAction" disabled={!files.length || uploading}>
+          <UploadCloud size={18} />
+          {uploading ? "Sending to processor..." : "Upload and process"}
+        </button>
+      </form>
+    </section>
   );
+}
+
+function ChatPage({ filings, selectedDoc, setSelectedDoc, session, askQuestion, startNewChat }) {
+  const [question, setQuestion] = useState("");
+  const [asking, setAsking] = useState(false);
 
   const samples = [
     {
@@ -81,44 +335,34 @@ function App() {
     },
   ];
 
+  async function submit(event) {
+    event.preventDefault();
+    const clean = question.trim();
+    if (!clean) return;
+    setQuestion("");
+    setAsking(true);
+    try {
+      await askQuestion(clean);
+    } finally {
+      setAsking(false);
+    }
+  }
+
   return (
-    <main className="app">
-      <aside className="sidebar">
-        <div className="brand">
-          <ShieldCheck size={30} />
-          <div>
-            <h1>Evidence Alpha</h1>
-            <p>SEC filing answers with proof.</p>
-          </div>
-        </div>
-
-        <label className="upload">
-          <FileUp size={18} />
-          <span>{uploading ? "Processing..." : "Add filing"}</span>
-          <input type="file" accept=".htm,.html" onChange={uploadFiling} disabled={uploading} />
-        </label>
-
-        <section className="panel">
-          <h2>Indexed Filings</h2>
-          <select value={selectedDoc} onChange={(event) => setSelectedDoc(event.target.value)}>
-            {filings.map((filing) => (
-              <option key={filing.doc_name} value={filing.doc_name}>
-                {filing.doc_name}
-              </option>
-            ))}
-          </select>
-          {selectedFiling && (
-            <dl className="meta">
-              <div><dt>Company</dt><dd>{selectedFiling.company || "Uploaded filing"}</dd></div>
-              <div><dt>Type</dt><dd>{selectedFiling.doc_type || "HTML"}</dd></div>
-              <div><dt>Chunks</dt><dd>{selectedFiling.chunk_count}</dd></div>
-            </dl>
-          )}
-        </section>
-
-        <section className="panel">
-          <h2>Sample Questions</h2>
-          <div className="samples">
+    <section className="page chatPage">
+      <div className="chatLayout">
+        <aside className="chatTools">
+          <button className="secondaryAction" onClick={startNewChat}><Plus size={18} /> New chat</button>
+          <label>
+            <span>Filing</span>
+            <select value={selectedDoc} onChange={(event) => setSelectedDoc(event.target.value)}>
+              {filings.map((filing) => (
+                <option key={filing.doc_name} value={filing.doc_name}>{filing.doc_name}</option>
+              ))}
+            </select>
+          </label>
+          <div className="sampleList">
+            <strong>Sample questions</strong>
             {samples.map((sample) => (
               <button
                 key={sample.question}
@@ -131,47 +375,73 @@ function App() {
               </button>
             ))}
           </div>
-        </section>
-      </aside>
+        </aside>
 
-      <section className="chat">
-        <header className="chatHeader">
-          <div>
-            <p className="eyebrow">Analyst workspace</p>
-            <h2>{selectedDoc || "Choose a filing"}</h2>
-          </div>
-          <span className="status">Evidence required</span>
-        </header>
-
-        <div className="messages">
-          {messages.length === 0 && (
-            <div className="empty">
-              <MessageSquare size={36} />
-              <h3>Ask a filing question</h3>
-              <p>Answers cite the document, page, and source passage. Unsupported questions are declined.</p>
+        <div className="chatPanel">
+          <header className="chatHeader">
+            <div>
+              <p className="eyebrow">Ask</p>
+              <h2>{session.title}</h2>
             </div>
-          )}
-          {messages.map((message, index) =>
-            message.role === "user" ? (
-              <div className="bubble user" key={index}>{message.text}</div>
-            ) : (
-              <AnswerCard key={index} data={message.data} />
-            )
-          )}
-          {loading && <div className="bubble assistant">Searching evidence...</div>}
+            <span className="status">Evidence required</span>
+          </header>
+          <div className="messages">
+            {session.messages.length === 0 && (
+              <div className="empty">
+                <MessageSquare size={38} />
+                <h3>Ask a filing question</h3>
+                <p>Answers cite document evidence and stay in this chat history.</p>
+              </div>
+            )}
+            {session.messages.map((message, index) =>
+              message.role === "user" ? (
+                <div className="bubble user" key={index}>{message.text}</div>
+              ) : (
+                <AnswerCard key={index} data={message.data} />
+              )
+            )}
+            {asking && <div className="bubble assistant">Retrieving evidence and asking the LLM...</div>}
+          </div>
+          <form className="ask" onSubmit={submit}>
+            <Search size={19} />
+            <input
+              value={question}
+              onChange={(event) => setQuestion(event.target.value)}
+              placeholder="Ask about revenue, capex, operating margin, balance sheet items..."
+            />
+            <button disabled={asking || !selectedDoc}>Ask</button>
+          </form>
         </div>
+      </div>
+    </section>
+  );
+}
 
-        <form className="ask" onSubmit={askQuestion}>
-          <Search size={19} />
-          <input
-            value={question}
-            onChange={(event) => setQuestion(event.target.value)}
-            placeholder="Ask about revenue, capex, operating margin, balance sheet items..."
-          />
-          <button disabled={loading || !selectedDoc}>Ask</button>
-        </form>
-      </section>
-    </main>
+function HistoryPage({ sessions, openSession, startNewChat }) {
+  return (
+    <section className="page">
+      <div className="pageIntro splitIntro">
+        <div>
+          <p className="eyebrow">History</p>
+          <h2>Previous chats</h2>
+          <p>Open earlier analyst conversations and continue asking questions.</p>
+        </div>
+        <button className="primaryAction" onClick={startNewChat}><Plus size={18} /> New chat</button>
+      </div>
+      <div className="historyList">
+        {sessions.length === 0 && <p className="muted">No chat history yet.</p>}
+        {sessions.map((session) => (
+          <button className="historyItem" key={session.id} onClick={() => openSession(session.id)}>
+            <MessageSquare size={20} />
+            <span>
+              <strong>{session.title}</strong>
+              <small>{session.docName || "No filing selected"} · {session.messages.length} message(s)</small>
+            </span>
+            <time>{new Date(session.updatedAt).toLocaleString()}</time>
+          </button>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -204,6 +474,29 @@ function AnswerCard({ data }) {
       </details>
     </article>
   );
+}
+
+function createSessionId() {
+  return `chat-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function newSession(id = createSessionId()) {
+  return {
+    id,
+    title: "New chat",
+    docName: "",
+    messages: [],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+function loadSessions() {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(HISTORY_KEY) || "[]");
+    return Array.isArray(stored) ? stored : [];
+  } catch {
+    return [];
+  }
 }
 
 createRoot(document.getElementById("root")).render(<App />);

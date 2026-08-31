@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import tempfile
 import os
+import threading
+import uuid
 from pathlib import Path
 
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
@@ -12,13 +14,16 @@ from dotenv import load_dotenv
 from .indexer import FilingIndex, answer_from_evidence, concise_evidence
 from .indexer import ROOT
 from .llm import answer_with_llm, llm_enabled, model_name, provider_name
-from .models import AskRequest, AskResponse, Evidence, FilingSummary, UploadResponse
+from .models import AskRequest, AskResponse, Evidence, FilingSummary, MultiUploadResponse, ProcessingJob, UploadResponse
 
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 app = FastAPI(title="Evidence Alpha API", version="0.1.0")
 index = FilingIndex()
+index_lock = threading.Lock()
+processor_lock = threading.Lock()
+processor_jobs: dict[str, ProcessingJob] = {}
 
 app.add_middleware(
     CORSMiddleware,
@@ -31,7 +36,8 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup() -> None:
-    index.ensure_index()
+    with index_lock:
+        index.ensure_index()
 
 
 @app.get("/health")
@@ -48,9 +54,31 @@ def practice_answer_key_enabled() -> bool:
     return os.getenv("USE_PRACTICE_ANSWER_KEY", "false").lower() in {"1", "true", "yes", "on"}
 
 
+def update_job(job_id: str, **updates: object) -> None:
+    with processor_lock:
+        job = processor_jobs[job_id]
+        data = job.model_dump()
+        data.update(updates)
+        processor_jobs[job_id] = ProcessingJob(**data)
+
+
+def process_uploaded_file(job_id: str, source: str, file_name: str) -> None:
+    update_job(job_id, status="processing", message="Parsing SEC HTML and updating filing index")
+    path = Path(source)
+    try:
+        with index_lock:
+            chunk_count = index.add_upload(path, file_name)
+        update_job(job_id, status="complete", message="Indexed and ready for questions", chunk_count=chunk_count)
+    except Exception as exc:  # pragma: no cover - defensive for background execution
+        update_job(job_id, status="failed", message=str(exc))
+    finally:
+        path.unlink(missing_ok=True)
+
+
 @app.get("/filings", response_model=list[FilingSummary])
 def filings() -> list[dict]:
-    index.ensure_index()
+    with index_lock:
+        index.ensure_index()
     return index.filings()
 
 
@@ -64,16 +92,59 @@ async def upload_filing(file: UploadFile = File(...)) -> UploadResponse:
         tmp_path = Path(tmp.name)
 
     try:
-        chunk_count = index.add_upload(tmp_path, file.filename)
+        with index_lock:
+            chunk_count = index.add_upload(tmp_path, file.filename)
     finally:
         tmp_path.unlink(missing_ok=True)
 
     return UploadResponse(doc_name=Path(file.filename).stem, status="indexed", chunk_count=chunk_count)
 
 
+@app.post("/filings/upload-multiple", response_model=MultiUploadResponse)
+async def upload_multiple_filings(background_tasks: BackgroundTasks, files: list[UploadFile] = File(...)) -> MultiUploadResponse:
+    if not files:
+        raise HTTPException(status_code=400, detail="Upload at least one SEC filing")
+
+    jobs: list[ProcessingJob] = []
+    pending_dir = ROOT / "backend" / "uploads" / "pending"
+    pending_dir.mkdir(parents=True, exist_ok=True)
+
+    for file in files:
+        if not file.filename or not file.filename.lower().endswith((".htm", ".html")):
+            raise HTTPException(status_code=400, detail=f"{file.filename or 'File'} must be .htm or .html")
+
+        job_id = str(uuid.uuid4())
+        safe_name = f"{job_id}_{Path(file.filename).name}"
+        pending_path = pending_dir / safe_name
+        pending_path.write_bytes(await file.read())
+
+        job = ProcessingJob(
+            job_id=job_id,
+            file_name=file.filename,
+            doc_name=Path(file.filename).stem,
+            status="queued",
+            message="Waiting for processor",
+        )
+        with processor_lock:
+            processor_jobs[job_id] = job
+        jobs.append(job)
+        background_tasks.add_task(process_uploaded_file, job_id, str(pending_path), file.filename)
+
+    return MultiUploadResponse(status="queued", jobs=jobs)
+
+
+@app.get("/processor", response_model=list[ProcessingJob])
+def processor_status() -> list[ProcessingJob]:
+    with processor_lock:
+        jobs = list(processor_jobs.values())
+    jobs.sort(key=lambda item: item.job_id, reverse=True)
+    return jobs[:50]
+
+
 @app.post("/ask", response_model=AskResponse)
 def ask(payload: AskRequest) -> AskResponse:
-    index.ensure_index()
+    with index_lock:
+        index.ensure_index()
     question = payload.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Question is required")
@@ -102,7 +173,8 @@ def ask(payload: AskRequest) -> AskResponse:
             calculation=exact.get("justification"),
         )
 
-    results = index.search(question, payload.doc_name, limit=5)
+    with index_lock:
+        results = index.search(question, payload.doc_name, limit=5)
     evidence = [
         Evidence(
             doc_name=chunk.doc_name,

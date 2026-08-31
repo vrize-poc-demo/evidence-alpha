@@ -72,14 +72,28 @@ The default model is `gpt-4.1-mini`, configured with `LLM_MODEL`. The model is u
 
 React provides a demo-friendly analyst workspace:
 
+- top navigation
+- dashboard
 - filing selector
-- upload control
+- single and multiple filing upload
+- global processor status
 - sample questions
 - chat interface
+- local browser chat history
 - answer cards
 - evidence drawer
 
 The frontend calls the FastAPI backend at `http://localhost:8000` by default.
+
+## Upload Processing
+
+The backend exposes a global processor:
+
+- `POST /filings/upload-multiple` accepts one or more SEC HTML files.
+- Each file becomes a processing job.
+- Jobs move through `queued`, `processing`, `complete`, or `failed`.
+- `GET /processor` returns recent processing jobs.
+- The frontend polls the processor and displays status across all pages.
 
 ## Production Upgrade Path
 

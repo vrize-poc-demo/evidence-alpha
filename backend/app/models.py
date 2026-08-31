@@ -38,3 +38,17 @@ class UploadResponse(BaseModel):
     doc_name: str
     status: str
     chunk_count: int
+
+
+class ProcessingJob(BaseModel):
+    job_id: str
+    file_name: str
+    doc_name: str
+    status: str
+    message: str
+    chunk_count: int = 0
+
+
+class MultiUploadResponse(BaseModel):
+    status: str
+    jobs: list[ProcessingJob]
