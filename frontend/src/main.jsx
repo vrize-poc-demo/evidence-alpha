@@ -439,9 +439,6 @@ function HealthPage({
   setSelectedModel,
   deleteAllDocuments,
 }) {
-  const selected = MODEL_OPTIONS.find((item) => item.id === selectedModel) || MODEL_OPTIONS[0];
-  const localSelected = selectedModel.startsWith("local-");
-
   return (
     <section className="page">
       <div className="pageIntro splitIntro">
@@ -455,29 +452,6 @@ function HealthPage({
           {healthLoading ? "Checking..." : "Refresh"}
         </button>
       </div>
-      <section className="workspacePanel modelSelectorPanel">
-        <div>
-          <h3>Answer Model</h3>
-          <p>Chat will use this selected model for every filing question.</p>
-        </div>
-        <label>
-          <span>Selected service</span>
-          <select value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)}>
-            {MODEL_OPTIONS.map((option) => (
-              <option value={option.id} key={option.id}>{option.label}</option>
-            ))}
-          </select>
-        </label>
-        <dl className="modelMeta">
-          <div><dt>Provider</dt><dd>{selected.provider}</dd></div>
-          <div><dt>Model</dt><dd>{selected.model}</dd></div>
-        </dl>
-        {localSelected && !IS_LOCAL_APP && (
-          <div className="modelNotice">
-            Local Ollama models work only in the local version. Use OpenAI ChatGPT 4.1-mini on Render.
-          </div>
-        )}
-      </section>
       <HealthSummary
         serviceHealth={serviceHealth}
         fetchServiceHealth={fetchServiceHealth}
@@ -488,6 +462,7 @@ function HealthPage({
         downloadLocalModel={downloadLocalModel}
         localActionMessage={localActionMessage}
         selectedModel={selectedModel}
+        setSelectedModel={setSelectedModel}
         deleteAllDocuments={deleteAllDocuments}
         expanded
       />
@@ -506,6 +481,7 @@ function HealthSummary({
   downloadLocalModel,
   localActionMessage,
   selectedModel,
+  setSelectedModel,
   deleteAllDocuments,
   expanded = false,
 }) {
@@ -537,8 +513,8 @@ function HealthSummary({
         <h3>Service Health</h3>
         <span className={`healthPill ${overall}`}>{healthLabel(overall)}</span>
       </div>
-      {selectedModel?.startsWith("local-") && (
-        <p className="healthHint">Local model selected: Ollama must be running on this machine.</p>
+      {expanded && setSelectedModel && (
+        <ModelSelector selectedModel={selectedModel} setSelectedModel={setSelectedModel} />
       )}
       <div className="serviceList">
         {services.length === 0 && <p className="muted">Checking services...</p>}
@@ -615,6 +591,39 @@ function HealthSummary({
               </button>
             </div>
           </section>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ModelSelector({ selectedModel, setSelectedModel }) {
+  const selected = MODEL_OPTIONS.find((item) => item.id === selectedModel) || MODEL_OPTIONS[0];
+  const localSelected = selectedModel.startsWith("local-");
+
+  return (
+    <section className="modelSelectorPanel">
+      <div>
+        <h3>Answer Model</h3>
+        <p>Chat will use this selected model for every filing question.</p>
+      </div>
+      <label>
+        <span>Selected service</span>
+        <select value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)}>
+          {MODEL_OPTIONS.map((option) => (
+            <option value={option.id} key={option.id}>{option.label}</option>
+          ))}
+        </select>
+      </label>
+      <dl className="modelMeta">
+        <div><dt>Provider</dt><dd>{selected.provider}</dd></div>
+        <div><dt>Model</dt><dd>{selected.model}</dd></div>
+      </dl>
+      {localSelected && (
+        <div className="modelNotice">
+          {IS_LOCAL_APP
+            ? "Local Ollama selected. Use the setup controls below if the selected model is not ready."
+            : "Local Ollama models work only in the local version. Use OpenAI ChatGPT 4.1-mini on Render."}
         </div>
       )}
     </section>
