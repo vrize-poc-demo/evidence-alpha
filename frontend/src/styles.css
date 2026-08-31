@@ -490,6 +490,62 @@ button {
   margin: 14px 0;
 }
 
+.localSetupSteps {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.setupStep {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #dfe6dd;
+  border-radius: 8px;
+  padding: 12px;
+  background: #ffffff;
+}
+
+.setupStep > span {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #e8eef3;
+  color: #334453;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.setupStep.complete > span {
+  background: #dff5e9;
+  color: #19523f;
+}
+
+.setupStep.warning {
+  border-color: #ead89a;
+  background: #fffbec;
+}
+
+.setupStep.working {
+  border-color: #bcd1ee;
+  background: #f3f7fd;
+}
+
+.setupStep strong,
+.setupStep small {
+  display: block;
+}
+
+.setupStep small {
+  color: #607169;
+  line-height: 1.4;
+  margin-top: 3px;
+}
+
 .modelAction {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -509,6 +565,15 @@ button {
   color: #607169;
   line-height: 1.4;
   margin-top: 3px;
+}
+
+.warningNotice {
+  border: 1px solid #ead89a;
+  background: #fffbec;
+  color: #5c4610;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-weight: 800;
 }
 
 .healthBar {

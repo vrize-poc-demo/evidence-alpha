@@ -181,7 +181,8 @@ Local model features:
 - Service Health shows whether Ollama is installed
 - Service Health shows whether Ollama is reachable at `http://localhost:11434`
 - the UI can start Ollama if the command is installed
-- the UI can pull the selected approved model
+- the UI can pull the selected approved model when Ollama is running but the model is missing
+- the chat shows a clear setup message if the selected local model is not downloaded
 - Render shows an information message because local Ollama cannot run inside the free hosted app
 
 ## Document Reset

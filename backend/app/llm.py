@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import urllib.error
+import urllib.request
 
 from openai import OpenAI, OpenAIError
 
@@ -55,6 +57,23 @@ def client_for_provider(provider: str) -> OpenAI:
     return OpenAI(api_key=api_key)
 
 
+def ollama_root_url() -> str:
+    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1").rstrip("/")
+    return base_url[:-3] if base_url.endswith("/v1") else base_url
+
+
+def ollama_model_available(model: str) -> tuple[bool, bool]:
+    try:
+        with urllib.request.urlopen(f"{ollama_root_url()}/api/tags", timeout=1.5) as response:
+            if response.status != 200:
+                return False, False
+            data = json.loads(response.read().decode("utf-8"))
+            models = [item.get("name", "") for item in data.get("models", []) if item.get("name")]
+            return True, any(item == model or item.startswith(f"{model}:") for item in models)
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return False, False
+
+
 def build_evidence(results: list[tuple[Chunk, float]]) -> list[dict]:
     evidence = []
     for index, (chunk, score) in enumerate(results, start=1):
@@ -94,6 +113,30 @@ def answer_with_llm(
             "model_used": label,
             "calculation": None,
         }
+    if provider == "ollama":
+        ollama_running, model_available = ollama_model_available(selected_model)
+        if not ollama_running:
+            return {
+                "status": "not_found",
+                "answer": (
+                    f"{label} is selected, but Ollama is not reachable. "
+                    "Open Service Health, start Ollama, then ask again."
+                ),
+                "confidence": 0.0,
+                "model_used": label,
+                "calculation": None,
+            }
+        if not model_available:
+            return {
+                "status": "not_found",
+                "answer": (
+                    f"{label} is selected, but {selected_model} is not downloaded. "
+                    "Open Service Health and click Download for the selected model."
+                ),
+                "confidence": 0.0,
+                "model_used": label,
+                "calculation": None,
+            }
 
     evidence = build_evidence(results)
     prompt = {

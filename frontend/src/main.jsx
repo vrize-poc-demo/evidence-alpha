@@ -139,6 +139,10 @@ function App() {
       });
       setLocalActionMessage(data.message);
       await fetchLocalModelStatus();
+      window.setTimeout(() => {
+        fetchServiceHealth(selectedModel);
+        fetchLocalModelStatus();
+      }, 1500);
     } catch (error) {
       setLocalActionMessage(error.message);
     }
@@ -642,52 +646,73 @@ function LocalModelControls({ status, refreshStatus, startLocalModels, downloadL
   const ollamaInstalled = Boolean(status?.ollama_installed);
   const ollamaRunning = Boolean(status?.ollama_running);
   const selectedLocalModel = LOCAL_MODEL_OPTIONS.find((item) => item.id === selectedModel);
-  const visibleOptions = selectedLocalModel ? [selectedLocalModel] : [];
+  const selectedJob = status?.jobs?.find((item) => item.model_choice === selectedModel);
+  const selectedReady = selectedLocalModel ? isLocalModelInstalled(installedModels, selectedLocalModel.model) : false;
+  const selectedDownloading = selectedJob?.status === "working" || selectedJob?.status === "queued";
+  const setupState = getLocalSetupState(ollamaInstalled, ollamaRunning, selectedReady, selectedDownloading);
 
   return (
     <section className="localModelControls">
       <div className="panelTitle">
         <h3>Local Model Setup</h3>
-        <span className={`healthPill ${ollamaRunning ? "ok" : "warning"}`}>{ollamaRunning ? "Running" : "Action needed"}</span>
+        <span className={`healthPill ${setupState.status}`}>{setupState.label}</span>
       </div>
       <p>
-        Use these controls only on a local machine. Render cannot run local Ollama models, but reviewers cloning the repo can use this setup page.
+        Use these controls only on a local machine. This page can install Ollama, start the local service, and download the selected model.
       </p>
-      {!ollamaInstalled && (
-        <a className="secondaryLink" href="https://ollama.com/download" target="_blank" rel="noreferrer">
-          <Download size={18} />
-          Download Ollama
-          <ExternalLink size={15} />
-        </a>
+
+      {selectedLocalModel && (
+        <div className="localSetupSteps">
+          <article className={`setupStep ${ollamaInstalled ? "complete" : "warning"}`}>
+            <span>{ollamaInstalled ? <CheckCircle2 size={18} /> : "1"}</span>
+            <div>
+              <strong>Install Ollama</strong>
+              <small>{ollamaInstalled ? "Ollama command is available on this machine." : "Download and install Ollama before local models can run."}</small>
+            </div>
+            {!ollamaInstalled && (
+              <a className="secondaryLink" href="https://ollama.com/download" target="_blank" rel="noreferrer">
+                <Download size={18} />
+                Download
+                <ExternalLink size={15} />
+              </a>
+            )}
+          </article>
+
+          <article className={`setupStep ${ollamaRunning ? "complete" : "warning"}`}>
+            <span>{ollamaRunning ? <CheckCircle2 size={18} /> : "2"}</span>
+            <div>
+              <strong>Start Ollama service</strong>
+              <small>{ollamaRunning ? "Ollama is reachable at http://localhost:11434." : "Start the local Ollama service before downloading or using a model."}</small>
+            </div>
+            {ollamaInstalled && !ollamaRunning && (
+              <button className="primaryAction compactAction" onClick={startLocalModels}>
+                <Signal size={18} />
+                Start
+              </button>
+            )}
+          </article>
+
+          <article className={`setupStep ${selectedReady ? "complete" : selectedDownloading ? "working" : "warning"}`}>
+            <span>{selectedReady ? <CheckCircle2 size={18} /> : "3"}</span>
+            <div>
+              <strong>Download {selectedLocalModel.label}</strong>
+              <small>{selectedJob?.message || (selectedReady ? "Selected model is downloaded and ready for chat." : `${selectedLocalModel.model} is not downloaded yet.`)}</small>
+            </div>
+            <button
+              className={selectedReady ? "secondaryAction" : "primaryAction compactAction"}
+              disabled={!ollamaRunning || selectedReady || selectedDownloading}
+              onClick={() => downloadLocalModel(selectedLocalModel.id)}
+            >
+              <Download size={18} />
+              {selectedReady ? "Ready" : selectedDownloading ? "Downloading" : `Download ${selectedLocalModel.model}`}
+            </button>
+          </article>
+        </div>
       )}
-      {ollamaInstalled && !ollamaRunning && (
-        <button className="primaryAction compactAction" onClick={startLocalModels}>
-          <Signal size={18} />
-          Start Ollama
-        </button>
-      )}
-      {ollamaInstalled && (
-        <div className="modelActionGrid">
-          {visibleOptions.map((option) => {
-            const installed = isLocalModelInstalled(installedModels, option.model);
-            const job = status?.jobs?.find((item) => item.model_choice === option.id);
-            return (
-              <article className="modelAction" key={option.id}>
-                <div>
-                  <strong>{option.label}</strong>
-                  <small>{job?.message || (installed ? "Downloaded and ready" : "Not downloaded yet")}</small>
-                </div>
-                <button
-                  className="secondaryAction"
-                  disabled={!ollamaRunning || installed || job?.status === "working" || job?.status === "queued"}
-                  onClick={() => downloadLocalModel(option.id)}
-                >
-                  <Download size={18} />
-                  {installed ? "Ready" : job?.status === "working" || job?.status === "queued" ? "Downloading" : "Download"}
-                </button>
-              </article>
-            );
-          })}
+
+      {selectedLocalModel && !selectedReady && ollamaRunning && !selectedDownloading && (
+        <div className="modelNotice warningNotice">
+          Ollama is running, but {selectedLocalModel.model} is not downloaded. Click Download to set up this selected model.
         </div>
       )}
       {selectedLocalModel && (
@@ -700,6 +725,14 @@ function LocalModelControls({ status, refreshStatus, startLocalModels, downloadL
       </button>
     </section>
   );
+}
+
+function getLocalSetupState(ollamaInstalled, ollamaRunning, selectedReady, selectedDownloading) {
+  if (selectedReady) return { status: "ok", label: "Ready" };
+  if (selectedDownloading) return { status: "working", label: "Downloading" };
+  if (ollamaRunning) return { status: "warning", label: "Model missing" };
+  if (ollamaInstalled) return { status: "warning", label: "Start needed" };
+  return { status: "warning", label: "Install needed" };
 }
 
 function HealthBar({ serviceHealth, healthLoading, setPage }) {
