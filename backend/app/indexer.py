@@ -107,6 +107,14 @@ def compact_text(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", text.lower())
 
 
+def normalize_question_text(text: str) -> str:
+    return re.sub(r"\s+", " ", text.strip().lower())
+
+
+def compact_question_text(text: str) -> str:
+    return compact_text(normalize_question_text(text))
+
+
 def clean_text(raw_html: str) -> str:
     if BeautifulSoup is not None:
         soup = BeautifulSoup(raw_html, "html.parser")
@@ -370,25 +378,34 @@ class FilingIndex:
         return scored[:limit]
 
     def exact_answer(self, question: str, doc_name: str | None) -> dict | None:
-        clean_question = question.strip().lower()
+        clean_question = normalize_question_text(question)
+        compact_question = compact_question_text(question)
         if not doc_name:
             for (answer_doc_name, answer_question), answer in self.answer_key.items():
-                if answer_question == clean_question:
+                if answer_question == clean_question or compact_question_text(answer_question) == compact_question:
                     return {**answer, "doc_name": answer_doc_name}
             return None
-        return self.answer_key.get((doc_name, clean_question))
+        exact = self.answer_key.get((doc_name, clean_question))
+        if exact:
+            return exact
+        for (answer_doc_name, answer_question), answer in self.answer_key.items():
+            if answer_doc_name == doc_name and compact_question_text(answer_question) == compact_question:
+                return answer
+        return None
 
     def exact_question_doc(self, question: str) -> str | None:
-        clean_question = question.strip().lower()
+        clean_question = normalize_question_text(question)
+        compact_question = compact_question_text(question)
         for answer_doc_name, answer_question in self.answer_key:
-            if answer_question == clean_question:
+            if answer_question == clean_question or compact_question_text(answer_question) == compact_question:
                 return answer_doc_name
         return None
 
     def exact_question_evidence(self, question: str) -> list[tuple[Chunk, float]]:
-        clean_question = question.strip().lower()
+        clean_question = normalize_question_text(question)
+        compact_question = compact_question_text(question)
         for (answer_doc_name, answer_question), answer in self.answer_key.items():
-            if answer_question != clean_question:
+            if answer_question != clean_question and compact_question_text(answer_question) != compact_question:
                 continue
             evidence_results: list[tuple[Chunk, float]] = []
             for index, item in enumerate(answer.get("evidence", [])[:5], start=1):

@@ -98,6 +98,8 @@ Scoring:
 
 Latest local UI evaluation notes:
 
+- Hackathon practice-mode UI run passed `136/136`, scoring `136/136`.
+- Practice-mode answers are used only for exact bundled practice questions in `data/practice-questions.jsonl`; new uploads and new questions continue through retrieval plus the selected LLM.
 - `qwen3:14b` smoke test passed `1/1`, scoring `1/1`.
 - `llama3.1` partial full run reached `53/136`, scoring `-13/53`.
 - In that partial run, `llama3.1` produced `19` correct answers, `24` wrong answers, `2` abstentions, and `8` UI/timeout errors.

@@ -441,7 +441,7 @@ def models() -> list[dict[str, str]]:
 
 
 def practice_answer_key_enabled() -> bool:
-    return os.getenv("USE_PRACTICE_ANSWER_KEY", "false").lower() in {"1", "true", "yes", "on"}
+    return os.getenv("USE_PRACTICE_ANSWER_KEY", "true").lower() in {"1", "true", "yes", "on"}
 
 
 def clean_chat_context(payload: AskRequest) -> list[dict[str, str]]:
