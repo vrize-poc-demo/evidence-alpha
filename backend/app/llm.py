@@ -136,7 +136,7 @@ def ollama_model_available(model: str) -> tuple[bool, bool]:
         return False, False
 
 
-def build_evidence(results: list[tuple[Chunk, float]]) -> list[dict]:
+def build_evidence(results: list[tuple[Chunk, float]], max_chars: int = 1800) -> list[dict]:
     evidence = []
     for index, (chunk, score) in enumerate(results, start=1):
         evidence.append(
@@ -145,7 +145,7 @@ def build_evidence(results: list[tuple[Chunk, float]]) -> list[dict]:
                 "doc_name": chunk.doc_name,
                 "page_num": chunk.page_num,
                 "score": score,
-                "text": concise_evidence(chunk.text, max_chars=1800),
+                "text": concise_evidence(chunk.text, max_chars=max_chars),
             }
         )
     return evidence
@@ -200,7 +200,7 @@ def answer_with_llm(
                 "calculation": None,
             }
 
-    evidence = build_evidence(results)
+    evidence = build_evidence(results, max_chars=1000 if provider == "ollama" else 1800)
     prompt = {
         "question": question,
         "chat_context": chat_context or [],
@@ -221,6 +221,7 @@ def answer_with_llm(
                 "Do not conclude that a company is capital intensive merely because it has PP&E or capital spending."
             ),
             "Return valid JSON only.",
+            "Keep the answer under 120 words unless the question requires a calculation list.",
         ],
         "schema": {
             "status": "answered or not_found",
@@ -233,21 +234,28 @@ def answer_with_llm(
 
     try:
         client = client_for_provider(provider)
-        response = client.chat.completions.create(
-            model=selected_model,
-            temperature=0,
-            response_format={"type": "json_object"},
-            messages=[
+        request_options = {
+            "model": selected_model,
+            "temperature": 0,
+            "response_format": {"type": "json_object"},
+            "messages": [
                 {
                     "role": "system",
                     "content": (
                         "You are Evidence Alpha, a careful financial analyst assistant. "
                         "You answer SEC filing questions only when cited evidence proves the answer. "
-                        "When evidence is weak or absent, say not_found."
+                        "When evidence is weak or absent, say not_found. "
+                        "For local Qwen, answer directly without extended thinking."
                     ),
                 },
                 {"role": "user", "content": json.dumps(prompt)},
             ],
+        }
+        if provider == "ollama":
+            request_options["max_tokens"] = 450
+            request_options["extra_body"] = {"options": {"num_predict": 450, "temperature": 0}}
+        response = client.chat.completions.create(
+            **request_options,
         )
         content = response.choices[0].message.content or "{}"
         parsed = json.loads(content)
