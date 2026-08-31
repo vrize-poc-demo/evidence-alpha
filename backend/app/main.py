@@ -20,7 +20,7 @@ from dotenv import load_dotenv
 
 from .indexer import FilingIndex, answer_from_evidence, concise_evidence
 from .indexer import ROOT
-from .llm import MODEL_CHOICES, answer_with_llm, llm_enabled, model_name, provider_name
+from .llm import MODEL_CHOICES, answer_with_llm, llm_enabled, model_name, provider_name, resolve_model_choice
 from .models import (
     AskRequest,
     AskResponse,
@@ -105,16 +105,34 @@ def ollama_tags() -> tuple[bool, list[str]]:
     return False, []
 
 
-def ollama_health() -> ServiceHealthItem:
+def ollama_health(model_choice: str | None = None) -> ServiceHealthItem:
     root_url = ollama_root_url()
     installed = ollama_installed()
     running, models = ollama_tags()
+    selected_model = LOCAL_MODEL_CHOICES.get(model_choice or "", "")
+    selected_label = MODEL_CHOICES.get(model_choice or "", {}).get("label", "Local Ollama")
     if running:
+        if selected_model:
+            installed_model = any(item == selected_model or item.startswith(f"{selected_model}:") for item in models)
+            if installed_model:
+                return service_item(selected_label, "ok", "Ollama running and selected model is downloaded", root_url)
+            return service_item(selected_label, "warning", "Ollama is running, but this model is not downloaded yet", root_url)
         model_count = len(models)
         return service_item("Local Ollama", "ok", f"Reachable with {model_count} local model(s)", root_url)
     if installed:
-        return service_item("Local Ollama", "warning", "Installed but not running. Use Health details to start it.", root_url)
-    return service_item("Local Ollama", "warning", "Not installed. Use Health details to download Ollama.", root_url)
+        return service_item(selected_label, "warning", "Installed but not running. Use Health details to start it.", root_url)
+    return service_item(selected_label, "warning", "Not installed. Use Health details to download Ollama.", root_url)
+
+
+def selected_model_health(model_choice: str | None) -> ServiceHealthItem:
+    provider, selected_model, label = resolve_model_choice(model_choice)
+    if provider == "ollama":
+        return ollama_health(model_choice)
+    if not llm_enabled():
+        return service_item("LLM generation", "warning", "USE_LLM is disabled", "Evidence retrieval still works")
+    if os.getenv("OPENAI_API_KEY"):
+        return service_item(label, "ok", "API key configured", selected_model)
+    return service_item(label, "warning", "OPENAI_API_KEY is not set", selected_model)
 
 
 def set_local_model_job(model_choice: str, model: str, status: str, message: str) -> LocalModelJob:
@@ -214,7 +232,7 @@ def pull_ollama_model(payload: LocalModelActionRequest, background_tasks: Backgr
 
 
 @app.get("/health/services", response_model=ServiceHealthResponse)
-def service_health() -> ServiceHealthResponse:
+def service_health(model_choice: str | None = None) -> ServiceHealthResponse:
     with index_lock:
         index.ensure_index()
         filing_count = len(index.filings())
@@ -240,15 +258,7 @@ def service_health() -> ServiceHealthResponse:
         ),
     ]
 
-    if llm_enabled():
-        if os.getenv("OPENAI_API_KEY"):
-            services.append(service_item("OpenAI ChatGPT 4.1-mini", "ok", "API key configured", "gpt-4.1-mini"))
-        else:
-            services.append(service_item("OpenAI ChatGPT 4.1-mini", "warning", "OPENAI_API_KEY is not set", "gpt-4.1-mini"))
-    else:
-        services.append(service_item("LLM generation", "warning", "USE_LLM is disabled", "Evidence retrieval still works"))
-
-    services.append(ollama_health())
+    services.append(selected_model_health(model_choice))
 
     if any(item.status == "error" for item in services):
         overall = "error"

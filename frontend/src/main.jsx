@@ -26,7 +26,13 @@ import "./styles.css";
 const LOCAL_HOSTS = ["localhost", "127.0.0.1", ""];
 const API = import.meta.env.VITE_API_URL || (LOCAL_HOSTS.includes(window.location.hostname) ? "http://localhost:8000" : "");
 const HISTORY_KEY = "evidence-alpha-chat-history";
+const MODEL_KEY = "evidence-alpha-selected-model";
 const IS_LOCAL_APP = LOCAL_HOSTS.includes(window.location.hostname);
+const MODEL_OPTIONS = [
+  { id: "openai-gpt-4.1-mini", label: "OpenAI ChatGPT 4.1-mini", provider: "OpenAI", model: "gpt-4.1-mini" },
+  { id: "local-qwen3-14b", label: "qwen3:14b local", provider: "Local Ollama", model: "qwen3:14b" },
+  { id: "local-llama3.1", label: "llama3.1 local", provider: "Local Ollama", model: "llama3.1" },
+];
 const LOCAL_MODEL_OPTIONS = [
   { id: "local-qwen3-14b", label: "qwen3:14b local", model: "qwen3:14b" },
   { id: "local-llama3.1", label: "llama3.1 local", model: "llama3.1" },
@@ -41,7 +47,7 @@ function App() {
   const [healthLoading, setHealthLoading] = useState(false);
   const [localModelStatus, setLocalModelStatus] = useState(null);
   const [localActionMessage, setLocalActionMessage] = useState("");
-  const [selectedModel, setSelectedModel] = useState("openai-gpt-4.1-mini");
+  const [selectedModel, setSelectedModel] = useState(loadModelChoice);
   const [appError, setAppError] = useState("");
   const [sessions, setSessions] = useState(loadSessions);
   const [activeSessionId, setActiveSessionId] = useState(() => sessions[0]?.id || createSessionId());
@@ -49,23 +55,27 @@ function App() {
 
   useEffect(() => {
     fetchHealth();
-    fetchServiceHealth();
+    fetchServiceHealth(selectedModel);
     fetchLocalModelStatus();
     fetchFilings();
     fetchProcessor();
     const processorTimer = window.setInterval(fetchProcessor, 3000);
-    const healthTimer = window.setInterval(fetchServiceHealth, 10000);
+    const healthTimer = window.setInterval(() => fetchServiceHealth(selectedModel), 10000);
     const localModelTimer = window.setInterval(fetchLocalModelStatus, 5000);
     return () => {
       window.clearInterval(processorTimer);
       window.clearInterval(healthTimer);
       window.clearInterval(localModelTimer);
     };
-  }, []);
+  }, [selectedModel]);
 
   useEffect(() => {
     window.localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions));
   }, [sessions]);
+
+  useEffect(() => {
+    window.localStorage.setItem(MODEL_KEY, selectedModel);
+  }, [selectedModel]);
 
   async function fetchHealth() {
     try {
@@ -76,10 +86,10 @@ function App() {
     }
   }
 
-  async function fetchServiceHealth() {
+  async function fetchServiceHealth(modelChoice = selectedModel) {
     setHealthLoading(true);
     try {
-      setServiceHealth(await apiJson("/health/services"));
+      setServiceHealth(await apiJson(`/health/services?model_choice=${encodeURIComponent(modelChoice)}`));
       setAppError("");
     } catch (error) {
       setServiceHealth({
@@ -112,7 +122,7 @@ function App() {
       const data = await apiJson("/local-models/start", { method: "POST" });
       setLocalActionMessage(data.message);
       window.setTimeout(() => {
-        fetchServiceHealth();
+        fetchServiceHealth(selectedModel);
         fetchLocalModelStatus();
       }, 1200);
     } catch (error) {
@@ -168,7 +178,7 @@ function App() {
     setProcessorJobs([]);
     setSessions([]);
     window.localStorage.removeItem(HISTORY_KEY);
-    await fetchServiceHealth();
+    await fetchServiceHealth(selectedModel);
     await fetchHealth();
     return data;
   }
@@ -245,7 +255,6 @@ function App() {
       {page === "dashboard" && (
         <Dashboard
           filings={filings}
-          health={health}
           serviceHealth={serviceHealth}
           fetchServiceHealth={fetchServiceHealth}
           healthLoading={healthLoading}
@@ -277,7 +286,6 @@ function App() {
         <ChatPage
           filings={filings}
           selectedModel={selectedModel}
-          setSelectedModel={setSelectedModel}
           session={activeSession}
           askQuestion={askQuestion}
           startNewChat={startNewChat}
@@ -296,6 +304,7 @@ function App() {
           downloadLocalModel={downloadLocalModel}
           localActionMessage={localActionMessage}
           selectedModel={selectedModel}
+          setSelectedModel={setSelectedModel}
           deleteAllDocuments={deleteAllDocuments}
         />
       )}
@@ -358,7 +367,6 @@ function GlobalProcessor({ jobs, activeJobs }) {
 
 function Dashboard({
   filings,
-  health,
   serviceHealth,
   fetchServiceHealth,
   healthLoading,
@@ -370,6 +378,7 @@ function Dashboard({
   setPage,
 }) {
   const totalChunks = filings.reduce((sum, filing) => sum + filing.chunk_count, 0);
+  const selected = MODEL_OPTIONS.find((item) => item.id === selectedModel) || MODEL_OPTIONS[0];
   return (
     <section className="page dashboard">
       <div className="pageIntro">
@@ -390,10 +399,10 @@ function Dashboard({
         <section className="workspacePanel">
           <h3>Model Status</h3>
           <dl className="detailList">
-            <div><dt>LLM</dt><dd>{health?.llm_enabled === "true" ? "Enabled" : "Disabled"}</dd></div>
-            <div><dt>Provider</dt><dd>{health?.provider || "Loading"}</dd></div>
-            <div><dt>Model</dt><dd>{health?.model || "Loading"}</dd></div>
-            <div><dt>Selected</dt><dd>{modelLabel(selectedModel)}</dd></div>
+            <div><dt>Provider</dt><dd>{selected.provider}</dd></div>
+            <div><dt>Model</dt><dd>{selected.model}</dd></div>
+            <div><dt>Selected</dt><dd>{selected.label}</dd></div>
+            <div><dt>Configured in</dt><dd>Service Health</dd></div>
           </dl>
         </section>
         <section className="workspacePanel">
@@ -427,8 +436,12 @@ function HealthPage({
   downloadLocalModel,
   localActionMessage,
   selectedModel,
+  setSelectedModel,
   deleteAllDocuments,
 }) {
+  const selected = MODEL_OPTIONS.find((item) => item.id === selectedModel) || MODEL_OPTIONS[0];
+  const localSelected = selectedModel.startsWith("local-");
+
   return (
     <section className="page">
       <div className="pageIntro splitIntro">
@@ -442,6 +455,29 @@ function HealthPage({
           {healthLoading ? "Checking..." : "Refresh"}
         </button>
       </div>
+      <section className="workspacePanel modelSelectorPanel">
+        <div>
+          <h3>Answer Model</h3>
+          <p>Chat will use this selected model for every filing question.</p>
+        </div>
+        <label>
+          <span>Selected service</span>
+          <select value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)}>
+            {MODEL_OPTIONS.map((option) => (
+              <option value={option.id} key={option.id}>{option.label}</option>
+            ))}
+          </select>
+        </label>
+        <dl className="modelMeta">
+          <div><dt>Provider</dt><dd>{selected.provider}</dd></div>
+          <div><dt>Model</dt><dd>{selected.model}</dd></div>
+        </dl>
+        {localSelected && !IS_LOCAL_APP && (
+          <div className="modelNotice">
+            Local Ollama models work only in the local version. Use OpenAI ChatGPT 4.1-mini on Render.
+          </div>
+        )}
+      </section>
       <HealthSummary
         serviceHealth={serviceHealth}
         fetchServiceHealth={fetchServiceHealth}
@@ -529,7 +565,7 @@ function HealthSummary({
           </button>
         )}
       </div>
-      {expanded && (
+      {expanded && selectedModel?.startsWith("local-") && (
         <LocalModelControls
           status={localModelStatus}
           refreshStatus={fetchLocalModelStatus}
@@ -590,6 +626,7 @@ function LocalModelControls({ status, refreshStatus, startLocalModels, downloadL
   const ollamaInstalled = Boolean(status?.ollama_installed);
   const ollamaRunning = Boolean(status?.ollama_running);
   const selectedLocalModel = LOCAL_MODEL_OPTIONS.find((item) => item.id === selectedModel);
+  const visibleOptions = selectedLocalModel ? [selectedLocalModel] : [];
 
   return (
     <section className="localModelControls">
@@ -615,7 +652,7 @@ function LocalModelControls({ status, refreshStatus, startLocalModels, downloadL
       )}
       {ollamaInstalled && (
         <div className="modelActionGrid">
-          {LOCAL_MODEL_OPTIONS.map((option) => {
+          {visibleOptions.map((option) => {
             const installed = isLocalModelInstalled(installedModels, option.model);
             const job = status?.jobs?.find((item) => item.model_choice === option.id);
             return (
@@ -757,10 +794,9 @@ function UploadPage({ fetchFilings, fetchProcessor, processorJobs, setProcessorJ
   );
 }
 
-function ChatPage({ filings, selectedModel, setSelectedModel, session, askQuestion, startNewChat }) {
+function ChatPage({ filings, selectedModel, session, askQuestion, startNewChat }) {
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState(false);
-  const localModelSelected = selectedModel.startsWith("local-");
 
   const samples = [
     {
@@ -799,24 +835,11 @@ function ChatPage({ filings, selectedModel, setSelectedModel, session, askQuesti
             <strong>All uploaded filings</strong>
             <small>{filings.length} indexed filing(s) will be searched for every question.</small>
           </div>
-          <label>
+          <div className="scopeBox">
             <span>Model</span>
-            <select value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)}>
-              <option value="openai-gpt-4.1-mini">OpenAI ChatGPT 4.1-mini</option>
-              <option value="local-qwen3-14b">qwen3:14b local</option>
-              <option value="local-llama3.1">llama3.1 local</option>
-            </select>
-          </label>
-          {localModelSelected && !IS_LOCAL_APP && (
-            <div className="modelNotice">
-              Local models work only in the local version with Ollama running. Use OpenAI ChatGPT 4.1-mini on Render.
-            </div>
-          )}
-          {localModelSelected && IS_LOCAL_APP && (
-            <div className="modelNotice">
-              Start Ollama and pull the selected model before asking.
-            </div>
-          )}
+            <strong>{modelLabel(selectedModel)}</strong>
+            <small>Change model and setup status from Service Health.</small>
+          </div>
           <div className="sampleList">
             <strong>Sample questions</strong>
             {samples.map((sample) => (
@@ -954,10 +977,13 @@ function loadSessions() {
   }
 }
 
+function loadModelChoice() {
+  const stored = window.localStorage.getItem(MODEL_KEY);
+  return MODEL_OPTIONS.some((item) => item.id === stored) ? stored : "openai-gpt-4.1-mini";
+}
+
 function modelLabel(modelId) {
-  const localModel = LOCAL_MODEL_OPTIONS.find((item) => item.id === modelId);
-  if (localModel) return localModel.label;
-  return "OpenAI ChatGPT 4.1-mini";
+  return MODEL_OPTIONS.find((item) => item.id === modelId)?.label || "OpenAI ChatGPT 4.1-mini";
 }
 
 function isLocalModelInstalled(installedModels, model) {

@@ -289,6 +289,71 @@ button {
   grid-column: 1 / -1;
 }
 
+.modelSelectorPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(240px, 0.8fr) minmax(220px, 0.7fr);
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.modelSelectorPanel h3,
+.modelSelectorPanel p,
+.modelMeta {
+  margin: 0;
+}
+
+.modelSelectorPanel p {
+  color: #607169;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+.modelSelectorPanel label {
+  display: grid;
+  gap: 6px;
+}
+
+.modelSelectorPanel label span {
+  color: #607169;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.modelSelectorPanel select {
+  height: 44px;
+  border: 1px solid #cbd8d0;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #1d2529;
+  padding: 0 11px;
+  font-weight: 800;
+}
+
+.modelMeta {
+  display: grid;
+  gap: 6px;
+}
+
+.modelMeta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #607169;
+}
+
+.modelMeta dd {
+  margin: 0;
+  color: #1d2529;
+  font-weight: 900;
+  text-align: right;
+}
+
+.modelSelectorPanel .modelNotice {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
 .healthPill {
   border-radius: 999px;
   padding: 6px 10px;
@@ -1065,7 +1130,8 @@ summary {
 
   .metricGrid,
   .dashboardGrid,
-  .chatLayout {
+  .chatLayout,
+  .modelSelectorPanel {
     grid-template-columns: 1fr;
   }
 
