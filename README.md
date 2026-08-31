@@ -84,6 +84,18 @@ Open:
 http://localhost:5173
 ```
 
+Or run both backend and frontend with one command:
+
+```bash
+./scripts/start_app.sh
+```
+
+Then open:
+
+```text
+http://127.0.0.1:5173
+```
+
 ## Reviewer Quick Start
 
 After cloning the repo:
