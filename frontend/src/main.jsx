@@ -4,6 +4,8 @@ import {
   BarChart3,
   CheckCircle2,
   Clock3,
+  Download,
+  ExternalLink,
   FileSearch,
   FileUp,
   History,
@@ -22,6 +24,10 @@ const LOCAL_HOSTS = ["localhost", "127.0.0.1", ""];
 const API = import.meta.env.VITE_API_URL || (LOCAL_HOSTS.includes(window.location.hostname) ? "http://localhost:8000" : "");
 const HISTORY_KEY = "evidence-alpha-chat-history";
 const IS_LOCAL_APP = LOCAL_HOSTS.includes(window.location.hostname);
+const LOCAL_MODEL_OPTIONS = [
+  { id: "local-qwen3-14b", label: "qwen3:14b local", model: "qwen3:14b" },
+  { id: "local-llama3.1", label: "llama3.1 local", model: "llama3.1" },
+];
 
 function App() {
   const [page, setPage] = useState("dashboard");
@@ -30,6 +36,8 @@ function App() {
   const [health, setHealth] = useState(null);
   const [serviceHealth, setServiceHealth] = useState(null);
   const [healthLoading, setHealthLoading] = useState(false);
+  const [localModelStatus, setLocalModelStatus] = useState(null);
+  const [localActionMessage, setLocalActionMessage] = useState("");
   const [selectedModel, setSelectedModel] = useState("openai-gpt-4.1-mini");
   const [appError, setAppError] = useState("");
   const [sessions, setSessions] = useState(loadSessions);
@@ -39,13 +47,16 @@ function App() {
   useEffect(() => {
     fetchHealth();
     fetchServiceHealth();
+    fetchLocalModelStatus();
     fetchFilings();
     fetchProcessor();
     const processorTimer = window.setInterval(fetchProcessor, 3000);
     const healthTimer = window.setInterval(fetchServiceHealth, 10000);
+    const localModelTimer = window.setInterval(fetchLocalModelStatus, 5000);
     return () => {
       window.clearInterval(processorTimer);
       window.clearInterval(healthTimer);
+      window.clearInterval(localModelTimer);
     };
   }, []);
 
@@ -82,6 +93,41 @@ function App() {
       setAppError(error.message);
     } finally {
       setHealthLoading(false);
+    }
+  }
+
+  async function fetchLocalModelStatus() {
+    try {
+      setLocalModelStatus(await apiJson("/local-models/status"));
+    } catch {
+      setLocalModelStatus(null);
+    }
+  }
+
+  async function startLocalModels() {
+    try {
+      const data = await apiJson("/local-models/start", { method: "POST" });
+      setLocalActionMessage(data.message);
+      window.setTimeout(() => {
+        fetchServiceHealth();
+        fetchLocalModelStatus();
+      }, 1200);
+    } catch (error) {
+      setLocalActionMessage(error.message);
+    }
+  }
+
+  async function downloadLocalModel(modelChoice) {
+    try {
+      const data = await apiJson("/local-models/pull", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model_choice: modelChoice }),
+      });
+      setLocalActionMessage(data.message);
+      await fetchLocalModelStatus();
+    } catch (error) {
+      setLocalActionMessage(error.message);
     }
   }
 
@@ -185,6 +231,11 @@ function App() {
           serviceHealth={serviceHealth}
           fetchServiceHealth={fetchServiceHealth}
           healthLoading={healthLoading}
+          localModelStatus={localModelStatus}
+          fetchLocalModelStatus={fetchLocalModelStatus}
+          startLocalModels={startLocalModels}
+          downloadLocalModel={downloadLocalModel}
+          localActionMessage={localActionMessage}
           selectedModel={selectedModel}
           sessions={sessions}
           activeJobs={activeJobs}
@@ -342,7 +393,17 @@ function Dashboard({
   );
 }
 
-function HealthPage({ serviceHealth, fetchServiceHealth, healthLoading, selectedModel }) {
+function HealthPage({
+  serviceHealth,
+  fetchServiceHealth,
+  healthLoading,
+  localModelStatus,
+  fetchLocalModelStatus,
+  startLocalModels,
+  downloadLocalModel,
+  localActionMessage,
+  selectedModel,
+}) {
   return (
     <section className="page">
       <div className="pageIntro splitIntro">
@@ -356,12 +417,35 @@ function HealthPage({ serviceHealth, fetchServiceHealth, healthLoading, selected
           {healthLoading ? "Checking..." : "Refresh"}
         </button>
       </div>
-      <HealthSummary serviceHealth={serviceHealth} fetchServiceHealth={fetchServiceHealth} healthLoading={healthLoading} selectedModel={selectedModel} expanded />
+      <HealthSummary
+        serviceHealth={serviceHealth}
+        fetchServiceHealth={fetchServiceHealth}
+        healthLoading={healthLoading}
+        localModelStatus={localModelStatus}
+        fetchLocalModelStatus={fetchLocalModelStatus}
+        startLocalModels={startLocalModels}
+        downloadLocalModel={downloadLocalModel}
+        localActionMessage={localActionMessage}
+        selectedModel={selectedModel}
+        expanded
+      />
     </section>
   );
 }
 
-function HealthSummary({ serviceHealth, fetchServiceHealth, healthLoading, setPage, selectedModel, expanded = false }) {
+function HealthSummary({
+  serviceHealth,
+  fetchServiceHealth,
+  healthLoading,
+  setPage,
+  localModelStatus,
+  fetchLocalModelStatus,
+  startLocalModels,
+  downloadLocalModel,
+  localActionMessage,
+  selectedModel,
+  expanded = false,
+}) {
   const services = serviceHealth?.services || [];
   const overall = serviceHealth?.status || "checking";
   return (
@@ -398,6 +482,80 @@ function HealthSummary({ serviceHealth, fetchServiceHealth, healthLoading, setPa
           </button>
         )}
       </div>
+      {expanded && (
+        <LocalModelControls
+          status={localModelStatus}
+          refreshStatus={fetchLocalModelStatus}
+          startLocalModels={startLocalModels}
+          downloadLocalModel={downloadLocalModel}
+          actionMessage={localActionMessage}
+          selectedModel={selectedModel}
+        />
+      )}
+    </section>
+  );
+}
+
+function LocalModelControls({ status, refreshStatus, startLocalModels, downloadLocalModel, actionMessage, selectedModel }) {
+  const installedModels = status?.installed_models || [];
+  const ollamaInstalled = Boolean(status?.ollama_installed);
+  const ollamaRunning = Boolean(status?.ollama_running);
+  const selectedLocalModel = LOCAL_MODEL_OPTIONS.find((item) => item.id === selectedModel);
+
+  return (
+    <section className="localModelControls">
+      <div className="panelTitle">
+        <h3>Local Model Setup</h3>
+        <span className={`healthPill ${ollamaRunning ? "ok" : "warning"}`}>{ollamaRunning ? "Running" : "Action needed"}</span>
+      </div>
+      <p>
+        Use these controls only on a local machine. Render cannot run local Ollama models, but reviewers cloning the repo can use this setup page.
+      </p>
+      {!ollamaInstalled && (
+        <a className="secondaryLink" href="https://ollama.com/download" target="_blank" rel="noreferrer">
+          <Download size={18} />
+          Download Ollama
+          <ExternalLink size={15} />
+        </a>
+      )}
+      {ollamaInstalled && !ollamaRunning && (
+        <button className="primaryAction compactAction" onClick={startLocalModels}>
+          <Signal size={18} />
+          Start Ollama
+        </button>
+      )}
+      {ollamaInstalled && (
+        <div className="modelActionGrid">
+          {LOCAL_MODEL_OPTIONS.map((option) => {
+            const installed = isLocalModelInstalled(installedModels, option.model);
+            const job = status?.jobs?.find((item) => item.model_choice === option.id);
+            return (
+              <article className="modelAction" key={option.id}>
+                <div>
+                  <strong>{option.label}</strong>
+                  <small>{job?.message || (installed ? "Downloaded and ready" : "Not downloaded yet")}</small>
+                </div>
+                <button
+                  className="secondaryAction"
+                  disabled={!ollamaRunning || installed || job?.status === "working" || job?.status === "queued"}
+                  onClick={() => downloadLocalModel(option.id)}
+                >
+                  <Download size={18} />
+                  {installed ? "Ready" : job?.status === "working" || job?.status === "queued" ? "Downloading" : "Download"}
+                </button>
+              </article>
+            );
+          })}
+        </div>
+      )}
+      {selectedLocalModel && (
+        <p className="healthHint">Selected local model: {selectedLocalModel.label}</p>
+      )}
+      {actionMessage && <div className="uploadMessage">{actionMessage}</div>}
+      <button className="secondaryAction compactAction" onClick={refreshStatus}>
+        <RefreshCw size={18} />
+        Refresh local status
+      </button>
     </section>
   );
 }
@@ -708,9 +866,13 @@ function loadSessions() {
 }
 
 function modelLabel(modelId) {
-  if (modelId === "local-qwen3-14b") return "qwen3:14b local";
-  if (modelId === "local-llama3.1") return "llama3.1 local";
+  const localModel = LOCAL_MODEL_OPTIONS.find((item) => item.id === modelId);
+  if (localModel) return localModel.label;
   return "OpenAI ChatGPT 4.1-mini";
+}
+
+function isLocalModelInstalled(installedModels, model) {
+  return installedModels.some((item) => item === model || item.startsWith(`${model}:`));
 }
 
 function mergeJobs(incoming, existing) {

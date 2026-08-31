@@ -387,6 +387,65 @@ button {
   margin-top: 14px;
 }
 
+.localModelControls {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #edf2ee;
+}
+
+.localModelControls > p {
+  color: #607169;
+  line-height: 1.45;
+  margin: 0 0 14px;
+}
+
+.secondaryLink,
+.compactAction {
+  width: fit-content;
+}
+
+.secondaryLink {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #cbd8d0;
+  border-radius: 7px;
+  background: #f7faf8;
+  color: #1b3b32;
+  font-weight: 900;
+  padding: 0 14px;
+  text-decoration: none;
+}
+
+.modelActionGrid {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0;
+}
+
+.modelAction {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #dfe6dd;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.modelAction strong,
+.modelAction small {
+  display: block;
+}
+
+.modelAction small {
+  color: #607169;
+  line-height: 1.4;
+  margin-top: 3px;
+}
+
 .healthBar {
   position: fixed;
   right: 18px;
@@ -916,5 +975,9 @@ summary {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .modelAction {
+    grid-template-columns: 1fr;
   }
 }

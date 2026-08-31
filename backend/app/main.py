@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import tempfile
 import os
+import json
+import shutil
+import subprocess
 import threading
+import time
 import urllib.error
 import urllib.request
 import uuid
@@ -22,6 +26,9 @@ from .models import (
     AskResponse,
     Evidence,
     FilingSummary,
+    LocalModelActionRequest,
+    LocalModelJob,
+    LocalModelStatusResponse,
     MultiUploadResponse,
     ProcessingJob,
     ServiceHealthItem,
@@ -37,6 +44,13 @@ index = FilingIndex()
 index_lock = threading.Lock()
 processor_lock = threading.Lock()
 processor_jobs: dict[str, ProcessingJob] = {}
+local_model_lock = threading.Lock()
+local_model_jobs: dict[str, LocalModelJob] = {}
+ollama_process: subprocess.Popen | None = None
+LOCAL_MODEL_CHOICES = {
+    "local-qwen3-14b": "qwen3:14b",
+    "local-llama3.1": "llama3.1",
+}
 
 app.add_middleware(
     CORSMiddleware,
@@ -67,16 +81,134 @@ def service_item(name: str, status: str, message: str, detail: str | None = None
     return ServiceHealthItem(name=name, status=status, message=message, detail=detail)
 
 
-def ollama_health() -> ServiceHealthItem:
+def ollama_root_url() -> str:
     base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1").rstrip("/")
-    root_url = base_url[:-3] if base_url.endswith("/v1") else base_url
+    return base_url[:-3] if base_url.endswith("/v1") else base_url
+
+
+def ollama_installed() -> bool:
+    return shutil.which("ollama") is not None
+
+
+def ollama_tags() -> tuple[bool, list[str]]:
+    root_url = ollama_root_url()
     try:
         with urllib.request.urlopen(f"{root_url}/api/tags", timeout=1.5) as response:
             if response.status == 200:
-                return service_item("Local Ollama", "ok", "Reachable on this machine", root_url)
+                data = json.loads(response.read().decode("utf-8"))
+                models = [item.get("name", "") for item in data.get("models", []) if item.get("name")]
+                return True, models
     except (urllib.error.URLError, TimeoutError, OSError):
-        return service_item("Local Ollama", "warning", "Not reachable. Local models need Ollama running.", root_url)
-    return service_item("Local Ollama", "warning", "Responded with an unexpected status", root_url)
+        return False, []
+    return False, []
+
+
+def ollama_health() -> ServiceHealthItem:
+    root_url = ollama_root_url()
+    installed = ollama_installed()
+    running, models = ollama_tags()
+    if running:
+        model_count = len(models)
+        return service_item("Local Ollama", "ok", f"Reachable with {model_count} local model(s)", root_url)
+    if installed:
+        return service_item("Local Ollama", "warning", "Installed but not running. Use Health details to start it.", root_url)
+    return service_item("Local Ollama", "warning", "Not installed. Use Health details to download Ollama.", root_url)
+
+
+def set_local_model_job(model_choice: str, model: str, status: str, message: str) -> LocalModelJob:
+    job = LocalModelJob(model_choice=model_choice, model=model, status=status, message=message)
+    with local_model_lock:
+        local_model_jobs[model_choice] = job
+    return job
+
+
+def pull_local_model(model_choice: str, model: str) -> None:
+    set_local_model_job(model_choice, model, "working", f"Downloading {model}. This can take several minutes.")
+    try:
+        completed = subprocess.run(
+            ["ollama", "pull", model],
+            capture_output=True,
+            text=True,
+            timeout=1800,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        set_local_model_job(model_choice, model, "error", f"Download timed out for {model}.")
+        return
+    except OSError as exc:
+        set_local_model_job(model_choice, model, "error", f"Could not run ollama pull: {exc}")
+        return
+
+    output = (completed.stdout or completed.stderr or "").strip()
+    if completed.returncode == 0:
+        set_local_model_job(model_choice, model, "complete", f"{model} is downloaded and ready.")
+    else:
+        set_local_model_job(model_choice, model, "error", output[-260:] or f"Download failed for {model}.")
+
+
+def ensure_ollama_model_choice(model_choice: str) -> str:
+    model = LOCAL_MODEL_CHOICES.get(model_choice)
+    if not model:
+        raise HTTPException(status_code=400, detail="Choose qwen3:14b local or llama3.1 local.")
+    return model
+
+
+@app.get("/local-models/status", response_model=LocalModelStatusResponse)
+def local_model_status() -> LocalModelStatusResponse:
+    running, models = ollama_tags()
+    with local_model_lock:
+        jobs = list(local_model_jobs.values())
+    return LocalModelStatusResponse(
+        ollama_installed=ollama_installed(),
+        ollama_running=running,
+        installed_models=models,
+        jobs=jobs,
+    )
+
+
+@app.post("/local-models/start")
+def start_ollama() -> dict[str, str]:
+    global ollama_process
+    if not ollama_installed():
+        raise HTTPException(status_code=400, detail="Ollama is not installed. Download it first from https://ollama.com/download")
+
+    running, _ = ollama_tags()
+    if running:
+        return {"status": "ok", "message": "Ollama is already running."}
+
+    try:
+        ollama_process = subprocess.Popen(
+            ["ollama", "serve"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except OSError as exc:
+        raise HTTPException(status_code=500, detail=f"Could not start Ollama: {exc}") from exc
+
+    time.sleep(1)
+    running, _ = ollama_tags()
+    return {
+        "status": "ok" if running else "starting",
+        "message": "Ollama started." if running else "Ollama start requested. Refresh health in a few seconds.",
+    }
+
+
+@app.post("/local-models/pull", response_model=LocalModelJob)
+def pull_ollama_model(payload: LocalModelActionRequest, background_tasks: BackgroundTasks) -> LocalModelJob:
+    model = ensure_ollama_model_choice(payload.model_choice)
+    if not ollama_installed():
+        raise HTTPException(status_code=400, detail="Ollama is not installed. Download it first from https://ollama.com/download")
+
+    running, models = ollama_tags()
+    if not running:
+        raise HTTPException(status_code=400, detail="Ollama is not running. Start Ollama first.")
+    if any(item == model or item.startswith(f"{model}:") for item in models):
+        return set_local_model_job(payload.model_choice, model, "complete", f"{model} is already downloaded.")
+
+    job = set_local_model_job(payload.model_choice, model, "queued", f"Queued download for {model}.")
+    background_tasks.add_task(pull_local_model, payload.model_choice, model)
+    return job
 
 
 @app.get("/health/services", response_model=ServiceHealthResponse)
@@ -153,6 +285,7 @@ def api_home() -> str:
             <li><a href="/openapi.json">OpenAPI JSON</a> - machine-readable schema</li>
             <li><a href="/health">Health check</a> - backend and model status</li>
             <li><a href="/models">Model choices</a> - OpenAI and local Ollama options</li>
+            <li><a href="/local-models/status">Local model status</a> - Ollama install, running, and download jobs</li>
             <li><a href="/filings">Indexed filings</a> - available SEC documents</li>
             <li><a href="/processor">Processor jobs</a> - upload indexing status</li>
           </ul>

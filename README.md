@@ -6,6 +6,7 @@ Evidence Alpha is a React + FastAPI proof-of-solution app for answering analyst 
 
 - Dashboard page with top navigation
 - Small bottom status bar with backend, index, processor, OpenAI, and local Ollama health
+- Local model setup controls to download Ollama, start Ollama, and pull approved local models
 - Single and multiple SEC filing upload
 - Global processing status for uploaded files
 - Ask page searches all uploaded/indexed filings with model selector and LLM-backed answers
@@ -188,6 +189,13 @@ ollama serve
 
 The webpage dropdown can then use `qwen3:14b local` or `llama3.1 local`. Local models require Ollama running at `http://localhost:11434`.
 
+The web UI Health details can help local reviewers:
+
+- open the Ollama download page if Ollama is not installed
+- start Ollama if the `ollama` command is installed but not running
+- download `qwen3:14b` or `llama3.1`
+- refresh local model status
+
 ## Run The Backend
 
 ```bash
@@ -285,6 +293,9 @@ Local version:
 - `GET /health` - service status
 - `GET /health/services` - detailed service health for the web UI status bar
 - `GET /models` - supported model choices
+- `GET /local-models/status` - local Ollama status and local model download jobs
+- `POST /local-models/start` - start Ollama locally when installed
+- `POST /local-models/pull` - download an approved local model with Ollama
 - `GET /filings` - indexed filings
 - `GET /processor` - global upload/indexing processor status
 - `POST /filings/upload` - upload and index a new filing

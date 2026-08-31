@@ -65,3 +65,21 @@ class ServiceHealthItem(BaseModel):
 class ServiceHealthResponse(BaseModel):
     status: str
     services: list[ServiceHealthItem]
+
+
+class LocalModelActionRequest(BaseModel):
+    model_choice: str
+
+
+class LocalModelJob(BaseModel):
+    model_choice: str
+    model: str
+    status: str
+    message: str
+
+
+class LocalModelStatusResponse(BaseModel):
+    ollama_installed: bool
+    ollama_running: bool
+    installed_models: list[str] = []
+    jobs: list[LocalModelJob] = []

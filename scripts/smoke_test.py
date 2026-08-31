@@ -66,6 +66,10 @@ def main() -> None:
     assert_ok(len(models) == 3, "/models should expose exactly 3 choices")
     assert_ok(models[0]["id"] == "openai-gpt-4.1-mini", "OpenAI model should be first")
 
+    local_models = client.get("/local-models/status").json()
+    assert_ok("ollama_installed" in local_models, "/local-models/status should report Ollama install status")
+    assert_ok("ollama_running" in local_models, "/local-models/status should report Ollama running status")
+
     filings = client.get("/filings").json()
     assert_ok(len(filings) >= 78, "/filings should load the copied dataset")
 
