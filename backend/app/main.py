@@ -33,6 +33,8 @@ from .models import (
     LocalModelStatusResponse,
     MultiUploadResponse,
     ProcessingJob,
+    ServiceActionRequest,
+    ServiceActionResponse,
     ServiceHealthItem,
     ServiceHealthResponse,
     UploadResponse,
@@ -103,6 +105,21 @@ def ensure_index_ready() -> None:
     with index_lock:
         index.ensure_index()
     set_index_state(ready=True, loading=False, error="")
+
+
+def reload_index_background() -> None:
+    set_index_state(ready=False, loading=True, error="")
+    try:
+        with index_lock:
+            index.load() if (ROOT / "backend" / ".index" / "chunks.json").exists() else index.rebuild()
+        set_index_state(ready=True, loading=False, error="")
+    except Exception as exc:  # pragma: no cover - defensive service action
+        set_index_state(ready=False, loading=False, error=str(exc))
+
+
+def restart_backend_later() -> None:
+    time.sleep(0.5)
+    os._exit(0)
 
 
 @app.get("/health")
@@ -269,6 +286,43 @@ def pull_ollama_model(payload: LocalModelActionRequest, background_tasks: Backgr
     job = set_local_model_job(payload.model_choice, model, "queued", f"Queued download for {model}.")
     background_tasks.add_task(pull_local_model, payload.model_choice, model)
     return job
+
+
+@app.post("/services/restart", response_model=ServiceActionResponse)
+def restart_service(payload: ServiceActionRequest, background_tasks: BackgroundTasks) -> ServiceActionResponse:
+    service = payload.service.strip().lower()
+    if service == "backend":
+        if os.getenv("RENDER"):
+            background_tasks.add_task(restart_backend_later)
+            return ServiceActionResponse(status="restarting", message="Backend restart requested. Render will start a fresh process.")
+        return ServiceActionResponse(
+            status="manual",
+            message="Local backend restart: stop the terminal running the app and run ./scripts/start_app.sh again.",
+        )
+
+    if service == "index":
+        background_tasks.add_task(reload_index_background)
+        return ServiceActionResponse(status="restarting", message="Filing index reload started in the background.")
+
+    if service == "processor":
+        with processor_lock:
+            processor_jobs.clear()
+        return ServiceActionResponse(status="ok", message="Processor queue/status was reset.")
+
+    if service == "openai":
+        load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=True)
+        return ServiceActionResponse(status="ok", message="OpenAI configuration reloaded from backend/.env. Refresh health to confirm.")
+
+    if service == "ollama":
+        running, _ = ollama_tags()
+        if running:
+            return ServiceActionResponse(status="ok", message="Ollama is already running. Health was refreshed.")
+        if not ollama_installed():
+            return ServiceActionResponse(status="manual", message="Ollama is not installed. Use the Download Ollama step first.")
+        data = start_ollama()
+        return ServiceActionResponse(status=data["status"], message=data["message"])
+
+    raise HTTPException(status_code=400, detail="Unknown service. Use backend, index, processor, openai, or ollama.")
 
 
 @app.get("/health/services", response_model=ServiceHealthResponse)

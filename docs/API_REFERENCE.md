@@ -28,6 +28,26 @@ Query parameters:
 
 Returns backend, index, processor, and selected model health.
 
+### `POST /services/restart`
+
+Runs a safe restart/reload action from the Service Health page.
+
+Request body:
+
+```json
+{
+  "service": "index"
+}
+```
+
+Supported service values:
+
+- `backend` - on Render, requests a process restart; locally, returns terminal restart instructions
+- `index` - reloads the filing index in the background
+- `processor` - resets processor queue/status
+- `openai` - reloads OpenAI configuration from `backend/.env`
+- `ollama` - starts/rechecks Ollama locally
+
 ## Models
 
 ### `GET /models`

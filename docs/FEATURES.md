@@ -136,6 +136,7 @@ It shows:
 - upload processor health
 - selected answer model health
 - local Ollama status when a local model is selected
+- restart/reload actions for backend, filing index, processor, OpenAI config, and Ollama
 
 The bottom status bar provides a compact health indicator and a Details entry point.
 

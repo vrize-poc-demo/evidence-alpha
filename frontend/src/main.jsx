@@ -48,6 +48,7 @@ function App() {
   const [healthLoading, setHealthLoading] = useState(false);
   const [localModelStatus, setLocalModelStatus] = useState(null);
   const [localActionMessage, setLocalActionMessage] = useState("");
+  const [serviceActionMessage, setServiceActionMessage] = useState("");
   const [selectedModel, setSelectedModel] = useState(loadModelChoice);
   const [appError, setAppError] = useState("");
   const [sessions, setSessions] = useState(loadSessions);
@@ -146,6 +147,26 @@ function App() {
       }, 1500);
     } catch (error) {
       setLocalActionMessage(error.message);
+    }
+  }
+
+  async function restartService(service) {
+    try {
+      const data = await apiJson("/services/restart", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ service }),
+      });
+      setServiceActionMessage(data.message);
+      await fetchHealth();
+      await fetchServiceHealth(selectedModel);
+      await fetchLocalModelStatus();
+      await fetchProcessor();
+      if (service === "index") {
+        window.setTimeout(() => fetchFilings(), 1500);
+      }
+    } catch (error) {
+      setServiceActionMessage(error.message);
     }
   }
 
@@ -275,6 +296,8 @@ function App() {
           startLocalModels={startLocalModels}
           downloadLocalModel={downloadLocalModel}
           localActionMessage={localActionMessage}
+          serviceActionMessage={serviceActionMessage}
+          restartService={restartService}
           selectedModel={selectedModel}
           sessions={sessions}
           activeJobs={activeJobs}
@@ -315,6 +338,8 @@ function App() {
           startLocalModels={startLocalModels}
           downloadLocalModel={downloadLocalModel}
           localActionMessage={localActionMessage}
+          serviceActionMessage={serviceActionMessage}
+          restartService={restartService}
           selectedModel={selectedModel}
           setSelectedModel={setSelectedModel}
           deleteAllDocuments={deleteAllDocuments}
@@ -447,6 +472,8 @@ function HealthPage({
   startLocalModels,
   downloadLocalModel,
   localActionMessage,
+  serviceActionMessage,
+  restartService,
   selectedModel,
   setSelectedModel,
   deleteAllDocuments,
@@ -473,6 +500,8 @@ function HealthPage({
         startLocalModels={startLocalModels}
         downloadLocalModel={downloadLocalModel}
         localActionMessage={localActionMessage}
+        serviceActionMessage={serviceActionMessage}
+        restartService={restartService}
         selectedModel={selectedModel}
         setSelectedModel={setSelectedModel}
         deleteAllDocuments={deleteAllDocuments}
@@ -492,6 +521,8 @@ function HealthSummary({
   startLocalModels,
   downloadLocalModel,
   localActionMessage,
+  serviceActionMessage,
+  restartService,
   selectedModel,
   setSelectedModel,
   deleteAllDocuments,
@@ -539,9 +570,16 @@ function HealthSummary({
               <p>{service.message}</p>
               {expanded && service.detail && <small>{service.detail}</small>}
             </div>
+            {expanded && restartService && (
+              <button className="serviceRestart" onClick={() => restartService(serviceActionFor(service.name))}>
+                <RefreshCw size={16} />
+                {serviceActionLabel(service.name)}
+              </button>
+            )}
           </article>
         ))}
       </div>
+      {expanded && serviceActionMessage && <div className="uploadMessage">{serviceActionMessage}</div>}
       <div className="healthActions">
         <button className="secondaryAction" onClick={fetchServiceHealth} disabled={healthLoading}>
           <RefreshCw size={18} />
@@ -611,6 +649,22 @@ function HealthSummary({
       )}
     </section>
   );
+}
+
+function serviceActionFor(name) {
+  if (name === "FastAPI backend") return "backend";
+  if (name === "Filing index") return "index";
+  if (name === "Global processor") return "processor";
+  if (name.toLowerCase().includes("openai")) return "openai";
+  return "ollama";
+}
+
+function serviceActionLabel(name) {
+  if (name === "Filing index") return "Reload";
+  if (name === "Global processor") return "Reset";
+  if (name.toLowerCase().includes("openai")) return "Reload config";
+  if (name.toLowerCase().includes("local") || name.toLowerCase().includes("ollama")) return "Start/recheck";
+  return "Restart";
 }
 
 function OpenAISetupControls({ selectedModelHealth }) {

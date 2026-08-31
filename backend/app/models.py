@@ -73,6 +73,15 @@ class ServiceHealthResponse(BaseModel):
     services: list[ServiceHealthItem]
 
 
+class ServiceActionRequest(BaseModel):
+    service: str
+
+
+class ServiceActionResponse(BaseModel):
+    status: str
+    message: str
+
+
 class LocalModelActionRequest(BaseModel):
     model_choice: str
 
