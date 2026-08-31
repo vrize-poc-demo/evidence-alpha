@@ -15,7 +15,7 @@ flowchart LR
     Retriever --> Evidence["Top evidence chunks"]
     Evidence --> LLMRouter["LLM router"]
     LLMRouter --> OpenAI["OpenAI<br/>gpt-4.1-mini"]
-    LLMRouter --> Ollama["Local Ollama<br/>qwen3:14b / llama3.1"]
+    LLMRouter --> Ollama["Local Ollama<br/>qwen3:14b"]
     API --> UI
     UI --> BrowserStore["Browser localStorage<br/>chat history + model choice"]
 ```
@@ -105,7 +105,6 @@ flowchart LR
     Backend --> Router["LLM router"]
     Router --> GPT["OpenAI gpt-4.1-mini"]
     Router --> Qwen["Ollama qwen3:14b"]
-    Router --> Llama["Ollama llama3.1"]
 ```
 
 The model selector is intentionally not inside the chat page. This keeps each chat focused on the conversation while Service Health controls the operating mode.
@@ -147,7 +146,7 @@ flowchart TB
     subgraph Local["Local reviewer machine"]
         LocalReact["Vite frontend"] --> LocalAPI["FastAPI backend"]
         LocalAPI --> LocalOpenAI["OpenAI gpt-4.1-mini"]
-        LocalAPI --> LocalOllama["Ollama qwen3:14b / llama3.1"]
+        LocalAPI --> LocalOllama["Ollama qwen3:14b"]
     end
 ```
 

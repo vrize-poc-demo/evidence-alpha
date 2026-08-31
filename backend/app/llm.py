@@ -15,7 +15,6 @@ DEFAULT_MODELS = {"openai": "gpt-4.1-mini", "ollama": "qwen3:14b"}
 MODEL_CHOICES = {
     "openai-gpt-4.1-mini": {"provider": "openai", "model": "gpt-4.1-mini", "label": "OpenAI ChatGPT 4.1-mini"},
     "local-qwen3-14b": {"provider": "ollama", "model": "qwen3:14b", "label": "qwen3:14b local"},
-    "local-llama3.1": {"provider": "ollama", "model": "llama3.1", "label": "llama3.1 local"},
 }
 
 

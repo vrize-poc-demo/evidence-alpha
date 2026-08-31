@@ -101,9 +101,8 @@ Supported options:
 
 - OpenAI ChatGPT 4.1-mini
 - qwen3:14b local
-- llama3.1 local
 
-Use OpenAI for the easiest reviewer setup. Use local models only when Ollama is installed and running.
+Use OpenAI for the easiest reviewer setup. Use Qwen3 14B local only when Ollama is installed and running.
 
 ## Local LLM Setup
 
@@ -123,7 +122,6 @@ Download supported models:
 
 ```bash
 ollama pull qwen3:14b
-ollama pull llama3.1
 ```
 
 The Service Health page can also help start Ollama and download the selected local model.

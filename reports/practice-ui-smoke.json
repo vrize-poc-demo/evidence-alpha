@@ -8,11 +8,10 @@
     "totalAvailable": 136,
     "tested": 1,
     "points": 1,
+    "maxPoints": 1,
     "correct": 1,
     "correctWrongLocation": 0,
     "abstained": 0,
-    "wrong": 0,
-    "maxPoints": 1,
     "wrongAnswer": 0,
     "uiErrors": 0
   },

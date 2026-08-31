@@ -62,12 +62,6 @@ Run a quick UI smoke test:
 npm run eval:ui -- --limit 1 --model local-qwen3-14b --out reports/practice-ui-smoke.json
 ```
 
-Run against `llama3.1`:
-
-```bash
-npm run eval:ui -- --model local-llama3.1 --timeout-ms 150000 --out reports/practice-ui-llama3.1-full.json
-```
-
 Run against `qwen3:14b`:
 
 ```bash
@@ -101,10 +95,8 @@ Latest local UI evaluation notes:
 - Real UI/model testing should keep `USE_PRACTICE_ANSWER_KEY=false`.
 - Do not present practice answer-key results as model accuracy; that mode is only for internal deterministic demos.
 - OpenAI real sample testing could not score answers locally because the local `.env` still contains the placeholder API key. The UI flow worked, but answers returned API-key errors.
-- `llama3.1` real UI sample with shortcuts disabled reached `3` completed questions before the rerun was stopped for slowness; it scored `-2/3` with `1` partial answer and `2` wrong answers.
 - `qwen3:14b` smoke test passed `1/1`, scoring `1/1`.
-- `llama3.1` partial full run reached `53/136`, scoring `-13/53`.
-- In that partial run, `llama3.1` produced `19` correct answers, `24` wrong answers, `2` abstentions, and `8` UI/timeout errors.
+- A prior interrupted `qwen3:14b` local UI run reached `3` completed/recorded questions with `1` correct and `2` UI/model timeouts.
 - The timeout errors started repeating around the Best Buy filings, so the run was stopped instead of waiting several more hours on the local machine.
 - Detailed output is written under `reports/`.
 
@@ -167,4 +159,3 @@ http://localhost:11434
 Supported local models:
 
 - `qwen3:14b`
-- `llama3.1`

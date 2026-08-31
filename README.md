@@ -25,10 +25,9 @@ Render free services can sleep after inactivity. If the published app is slow on
 - Browser chat history stored locally for the reviewer.
 - Evidence-backed answers with confidence, source document, page number, and supporting passages.
 - Service Health page with backend, index, processor, selected LLM, and Ollama/local model setup status.
-- Model selection from Service Health only, with exactly three supported choices:
+- Model selection from Service Health only, with exactly two supported choices:
   - OpenAI ChatGPT 4.1-mini
   - qwen3:14b local
-  - llama3.1 local
 - Local Ollama controls to open/download Ollama, start Ollama, and pull the selected local model.
 - Confirmed document reset flow. The reviewer must type `DELETE` before all indexed/uploaded documents are cleared.
 - Render-compatible single service where FastAPI serves both the API and the built React app.
@@ -42,7 +41,6 @@ Render free services can sleep after inactivity. If the published app is slow on
 - LLMs:
   - OpenAI `gpt-4.1-mini` for hosted and easiest reviewer mode.
   - Ollama `qwen3:14b` for local-only mode.
-  - Ollama `llama3.1` for local-only mode.
 - Storage:
   - Source filings in `data/filings`.
   - Generated index in `backend/.index/chunks.json`.
@@ -124,10 +122,9 @@ Then pull one of the supported models:
 
 ```bash
 ollama pull qwen3:14b
-ollama pull llama3.1
 ```
 
-In the app, open Service Health and change the Answer Model dropdown to `qwen3:14b local` or `llama3.1 local`.
+In the app, open Service Health and change the Answer Model dropdown to `qwen3:14b local`.
 
 On Render, local model choices are visible for clarity, but they show an information message because Ollama runs only on a local reviewer machine.
 

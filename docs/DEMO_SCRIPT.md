@@ -33,7 +33,7 @@ Evidence Alpha is an analyst copilot for SEC filings. It does not answer from ge
 3. Open Service Health.
 4. Show the Answer Model dropdown.
 5. Keep OpenAI ChatGPT 4.1-mini selected for the hosted demo.
-6. Explain that qwen3:14b local and llama3.1 local are available only when running locally with Ollama.
+6. Explain that qwen3:14b local is available only when running locally with Ollama.
 7. Open Upload.
 8. Select one or many SEC `.htm` or `.html` filings.
 9. Upload and show the processor status moving through queued, processing, and complete.

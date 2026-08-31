@@ -148,7 +148,6 @@ Supported choices:
 
 - OpenAI ChatGPT 4.1-mini
 - qwen3:14b local
-- llama3.1 local
 
 Default:
 
@@ -183,7 +182,6 @@ Local mode uses Ollama on the reviewer's machine.
 Supported local models:
 
 - `qwen3:14b`
-- `llama3.1`
 
 Local model features:
 

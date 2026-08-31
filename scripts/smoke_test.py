@@ -63,8 +63,9 @@ def main() -> None:
     assert_ok("Global processor" in service_names, "/health/services should include processor status")
 
     models = client.get("/models").json()
-    assert_ok(len(models) == 3, "/models should expose exactly 3 choices")
+    assert_ok(len(models) == 2, "/models should expose exactly 2 choices")
     assert_ok(models[0]["id"] == "openai-gpt-4.1-mini", "OpenAI model should be first")
+    assert_ok(models[1]["id"] == "local-qwen3-14b", "Qwen3 14B should be the only local model")
 
     local_models = client.get("/local-models/status").json()
     assert_ok("ollama_installed" in local_models, "/local-models/status should report Ollama install status")

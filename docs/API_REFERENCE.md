@@ -56,7 +56,6 @@ Returns the exact supported model choices:
 
 - `openai-gpt-4.1-mini`
 - `local-qwen3-14b`
-- `local-llama3.1`
 
 ## Local Models
 

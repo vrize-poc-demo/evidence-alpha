@@ -1,6 +1,6 @@
 # Model Guide
 
-Evidence Alpha supports exactly three answer models. The model is selected from the Service Health page, not from the chat page.
+Evidence Alpha supports exactly two answer models. The model is selected from the Service Health page, not from the chat page.
 
 The app does not train or fine-tune any model. It uses retrieval-augmented generation:
 
@@ -28,7 +28,6 @@ Why:
 | --- | --- | --- | --- | --- |
 | OpenAI ChatGPT 4.1-mini | Render and local | Main reviewer demo | Best setup experience, strong instruction following, good citation discipline, no local hardware requirement | Requires API key, has usage cost, needs internet |
 | qwen3:14b local | Local only | Free local accuracy testing | No API cost, good reasoning for a local model, stronger than smaller local models when hardware is available | Requires Ollama, large download, needs enough RAM/CPU, cannot run on Render free plan |
-| llama3.1 local | Local only | Lightweight fallback local testing | No API cost, widely supported by Ollama, easier to run than larger local models | Usually less reliable for financial extraction than OpenAI, can miss table details, still needs Ollama and local resources |
 
 ## OpenAI ChatGPT 4.1-Mini
 
@@ -95,7 +94,8 @@ Pros:
 
 - free after download
 - no external API calls for answer generation
-- good local reasoning capability
+- good local reasoning capability compared with smaller free local models
+- stronger free local option for this financial QA demo
 - useful for demos where API keys are not available
 
 Cons:
@@ -105,54 +105,19 @@ Cons:
 - large model download
 - slower than hosted OpenAI on many laptops
 - may be less consistent with strict JSON and citation rules
+- judged accuracy will still depend heavily on retrieval quality and table parsing
 - will not work on Render free plan
+
+Observed local testing:
+
+- Qwen3 14B passed the first practice-question UI smoke test.
+- A prior interrupted 3-question local run had 1 correct answer and 2 UI/model timeouts.
+- It is the best free local option in this project, but OpenAI GPT-4.1 mini remains the safer judged-accuracy mode.
 
 Setup:
 
 ```bash
 ollama pull qwen3:14b
-ollama serve
-```
-
-## Llama3.1 Local
-
-Configuration id:
-
-```text
-local-llama3.1
-```
-
-Ollama model:
-
-```text
-llama3.1
-```
-
-Use this when:
-
-- the app is running locally
-- the machine cannot comfortably run `qwen3:14b`
-- the reviewer wants a no-cost local fallback
-
-Pros:
-
-- free after download
-- local-only answer generation
-- broadly available through Ollama
-- easier fallback than a larger local model
-
-Cons:
-
-- local only
-- requires Ollama
-- can be less accurate on financial tables and exact figures
-- may need more careful prompting for citation discipline
-- will not work on Render free plan
-
-Setup:
-
-```bash
-ollama pull llama3.1
 ollama serve
 ```
 
@@ -165,7 +130,6 @@ Use this decision rule:
 | Reviewer opens the hosted Render URL | OpenAI ChatGPT 4.1-mini |
 | Reviewer clones and runs locally, wants easiest setup | OpenAI ChatGPT 4.1-mini |
 | Reviewer wants no API spend and has a capable machine | qwen3:14b local |
-| Reviewer wants a lighter no-cost local fallback | llama3.1 local |
 
 ## Accuracy Notes
 

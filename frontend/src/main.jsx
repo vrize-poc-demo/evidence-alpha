@@ -32,11 +32,9 @@ const IS_LOCAL_APP = LOCAL_HOSTS.includes(window.location.hostname);
 const MODEL_OPTIONS = [
   { id: "openai-gpt-4.1-mini", label: "OpenAI ChatGPT 4.1-mini", provider: "OpenAI", model: "gpt-4.1-mini" },
   { id: "local-qwen3-14b", label: "qwen3:14b local", provider: "Local Ollama", model: "qwen3:14b" },
-  { id: "local-llama3.1", label: "llama3.1 local", provider: "Local Ollama", model: "llama3.1" },
 ];
 const LOCAL_MODEL_OPTIONS = [
   { id: "local-qwen3-14b", label: "qwen3:14b local", model: "qwen3:14b" },
-  { id: "local-llama3.1", label: "llama3.1 local", model: "llama3.1" },
 ];
 
 function App() {

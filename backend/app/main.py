@@ -55,7 +55,6 @@ local_model_jobs: dict[str, LocalModelJob] = {}
 ollama_process: subprocess.Popen | None = None
 LOCAL_MODEL_CHOICES = {
     "local-qwen3-14b": "qwen3:14b",
-    "local-llama3.1": "llama3.1",
 }
 
 app.add_middleware(
@@ -226,7 +225,7 @@ def pull_local_model(model_choice: str, model: str) -> None:
 def ensure_ollama_model_choice(model_choice: str) -> str:
     model = LOCAL_MODEL_CHOICES.get(model_choice)
     if not model:
-        raise HTTPException(status_code=400, detail="Choose qwen3:14b local or llama3.1 local.")
+        raise HTTPException(status_code=400, detail="Choose qwen3:14b local.")
     return model
 
 
