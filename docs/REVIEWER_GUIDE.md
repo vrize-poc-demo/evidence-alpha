@@ -46,7 +46,7 @@ OPENAI_API_KEY=your_openai_api_key_here
 OLLAMA_BASE_URL=http://localhost:11434/v1
 LLM_MODEL=gpt-4.1-mini
 USE_LLM=true
-USE_PRACTICE_ANSWER_KEY=true
+USE_PRACTICE_ANSWER_KEY=false
 ```
 
 Do not commit a real API key to GitHub.

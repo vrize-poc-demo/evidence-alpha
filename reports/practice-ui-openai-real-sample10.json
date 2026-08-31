@@ -1,0 +1,292 @@
+{
+  "generatedAt": "2026-08-31T17:24:08.437Z",
+  "appUrl": "http://127.0.0.1:8000/",
+  "model": "openai-gpt-4.1-mini",
+  "start": 0,
+  "limit": 10,
+  "summary": {
+    "totalAvailable": 136,
+    "tested": 10,
+    "points": 0,
+    "maxPoints": 10,
+    "correct": 0,
+    "correctWrongLocation": 0,
+    "abstained": 10,
+    "wrongAnswer": 0,
+    "uiErrors": 0
+  },
+  "results": [
+    {
+      "index": 0,
+      "financebenchId": "financebench_id_03029",
+      "company": "3M",
+      "expectedDoc": "3M_2018_10K",
+      "expectedPages": [
+        59
+      ],
+      "expectedAnswer": "$1577.00",
+      "question": "What is the FY2018 capital expenditure amount (in USD millions) for 3M? Give a response to the question by relying on the details shown in the cash flow statement.",
+      "result": {
+        "status": "not_found",
+        "document": "3M_2018_10K",
+        "page": 104,
+        "confidence": 0,
+        "model": "OpenAI ChatGPT 4.1-mini",
+        "answer": "LLM answer generation failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: your_ope************here. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}",
+        "citation": "Source: 3M_2018_10K, page 104"
+      },
+      "score": {
+        "points": 0,
+        "label": "not_found_or_abstained",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 1886
+    },
+    {
+      "index": 1,
+      "financebenchId": "financebench_id_04672",
+      "company": "3M",
+      "expectedDoc": "3M_2018_10K",
+      "expectedPages": [
+        57
+      ],
+      "expectedAnswer": "$8.70",
+      "question": "Assume that you are a public equities analyst. Answer the following question by primarily using information that is shown in the balance sheet: what is the year end FY2018 net PPNE for 3M? Answer in USD billions.",
+      "result": {
+        "status": "not_found",
+        "document": "3M_2018_10K",
+        "page": 108,
+        "confidence": 0,
+        "model": "OpenAI ChatGPT 4.1-mini",
+        "answer": "LLM answer generation failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: your_ope************here. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}",
+        "citation": "Source: 3M_2018_10K, page 108"
+      },
+      "score": {
+        "points": 0,
+        "label": "not_found_or_abstained",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 1354
+    },
+    {
+      "index": 2,
+      "financebenchId": "financebench_id_00499",
+      "company": "3M",
+      "expectedDoc": "3M_2022_10K",
+      "expectedPages": [
+        47,
+        49,
+        51
+      ],
+      "expectedAnswer": "No, the company is managing its CAPEX and Fixed Assets pretty efficiently, which is evident from below key metrics:\nCAPEX/Revenue Ratio: 5.1%\nFixed assets/Total Assets: 20%\nReturn on Assets= 12.4%",
+      "question": "Is 3M a capital-intensive business based on FY2022 data?",
+      "result": {
+        "status": "not_found",
+        "document": "3M_2022_10K",
+        "page": 639,
+        "confidence": 0,
+        "model": "OpenAI ChatGPT 4.1-mini",
+        "answer": "LLM answer generation failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: your_ope************here. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}",
+        "citation": "Source: 3M_2022_10K, page 639"
+      },
+      "score": {
+        "points": 0,
+        "label": "not_found_or_abstained",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 1353
+    },
+    {
+      "index": 3,
+      "financebenchId": "financebench_id_01226",
+      "company": "3M",
+      "expectedDoc": "3M_2022_10K",
+      "expectedPages": [
+        26
+      ],
+      "expectedAnswer": "Operating Margin for 3M in FY2022 has decreased by 1.7% primarily due to: \n-Decrease in gross Margin\n-mostly one-off charges including Combat Arms Earplugs litigation, impairment related to exiting PFAS manufacturing, costs related to exiting Russia and divestiture-related restructuring\ncharges",
+      "question": "What drove operating margin change as of FY2022 for 3M? If operating margin is not a useful metric for a company like this, then please state that and explain why.",
+      "result": {
+        "status": "not_found",
+        "document": "3M_2022_10K",
+        "page": 16,
+        "confidence": 0,
+        "model": "OpenAI ChatGPT 4.1-mini",
+        "answer": "LLM answer generation failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: your_ope************here. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}",
+        "citation": "Source: 3M_2022_10K, page 16"
+      },
+      "score": {
+        "points": 0,
+        "label": "not_found_or_abstained",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 1347
+    },
+    {
+      "index": 4,
+      "financebenchId": "financebench_id_01865",
+      "company": "3M",
+      "expectedDoc": "3M_2022_10K",
+      "expectedPages": [
+        24
+      ],
+      "expectedAnswer": "The consumer segment shrunk by 0.9% organically.",
+      "question": "If we exclude the impact of M&A, which segment has dragged down 3M's overall growth in 2022?",
+      "result": {
+        "status": "not_found",
+        "document": "3M_2022_10K",
+        "page": 994,
+        "confidence": 0,
+        "model": "OpenAI ChatGPT 4.1-mini",
+        "answer": "LLM answer generation failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: your_ope************here. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}",
+        "citation": "Source: 3M_2022_10K, page 994"
+      },
+      "score": {
+        "points": 0,
+        "label": "not_found_or_abstained",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 1342
+    },
+    {
+      "index": 5,
+      "financebenchId": "financebench_id_00807",
+      "company": "3M",
+      "expectedDoc": "3M_2023Q2_10Q",
+      "expectedPages": [
+        4
+      ],
+      "expectedAnswer": "No. The quick ratio for 3M was 0.96 by Jun'23 close, which needs a bit of an improvement to touch the 1x mark",
+      "question": "Does 3M have a reasonably healthy liquidity profile based on its quick ratio for Q2 of FY2023? If the quick ratio is not relevant to measure liquidity, please state that and explain why.",
+      "result": {
+        "status": "not_found",
+        "document": "3M_2023Q2_10Q",
+        "page": 62,
+        "confidence": 0,
+        "model": "OpenAI ChatGPT 4.1-mini",
+        "answer": "LLM answer generation failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: your_ope************here. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}",
+        "citation": "Source: 3M_2023Q2_10Q, page 62"
+      },
+      "score": {
+        "points": 0,
+        "label": "not_found_or_abstained",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 1350
+    },
+    {
+      "index": 6,
+      "financebenchId": "financebench_id_00941",
+      "company": "3M",
+      "expectedDoc": "3M_2023Q2_10Q",
+      "expectedPages": [],
+      "expectedAnswer": "Following debt securities registered under 3M's name are listed to trade on the New York Stock Exchange:\n-1.500% Notes due 2026 (Trading Symbol: MMM26)\n-1.750% Notes due 2030 (Trading Symbol: MMM30)\n-1.500% Notes due 2031 (Trading Symbol: MMM31)",
+      "question": "Which debt securities are registered to trade on a national securities exchange under 3M's name as of Q2 of 2023?",
+      "result": {
+        "status": "not_found",
+        "document": "3M_2023Q2_10Q",
+        "page": 48,
+        "confidence": 0,
+        "model": "OpenAI ChatGPT 4.1-mini",
+        "answer": "LLM answer generation failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: your_ope************here. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}",
+        "citation": "Source: 3M_2023Q2_10Q, page 48"
+      },
+      "score": {
+        "points": 0,
+        "label": "not_found_or_abstained",
+        "answerCorrect": false,
+        "locationCorrect": true
+      },
+      "durationMs": 1348
+    },
+    {
+      "index": 7,
+      "financebenchId": "financebench_id_01858",
+      "company": "3M",
+      "expectedDoc": "3M_2023Q2_10Q",
+      "expectedPages": [
+        61
+      ],
+      "expectedAnswer": "Yes, not only they distribute the dividends on a routine basis, 3M has also been increasing the per share dividend for consecutive 65 years",
+      "question": "Does 3M maintain a stable trend of dividend distribution?",
+      "result": {
+        "status": "not_found",
+        "document": "3M_2018_10K",
+        "page": 43,
+        "confidence": 0,
+        "model": "OpenAI ChatGPT 4.1-mini",
+        "answer": "LLM answer generation failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: your_ope************here. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}",
+        "citation": "Source: 3M_2018_10K, page 43"
+      },
+      "score": {
+        "points": 0,
+        "label": "not_found_or_abstained",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 1352
+    },
+    {
+      "index": 8,
+      "financebenchId": "financebench_id_02987",
+      "company": "Activision Blizzard",
+      "expectedDoc": "ACTIVISIONBLIZZARD_2019_10K",
+      "expectedPages": [
+        68,
+        69
+      ],
+      "expectedAnswer": "24.26",
+      "question": "What is the FY2019 fixed asset turnover ratio for Activision Blizzard? Fixed asset turnover ratio is defined as: FY2019 revenue / (average PP&E between FY2018 and FY2019). Round your answer to two decimal places. Base your judgments on the information provided primarily in the statement of income and the statement of financial position.",
+      "result": {
+        "status": "not_found",
+        "document": "ACTIVISIONBLIZZARD_2019_10K",
+        "page": 34,
+        "confidence": 0,
+        "model": "OpenAI ChatGPT 4.1-mini",
+        "answer": "LLM answer generation failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: your_ope************here. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}",
+        "citation": "Source: ACTIVISIONBLIZZARD_2019_10K, page 34"
+      },
+      "score": {
+        "points": 0,
+        "label": "not_found_or_abstained",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 1331
+    },
+    {
+      "index": 9,
+      "financebenchId": "financebench_id_07966",
+      "company": "Activision Blizzard",
+      "expectedDoc": "ACTIVISIONBLIZZARD_2019_10K",
+      "expectedPages": [
+        69,
+        72
+      ],
+      "expectedAnswer": "1.9%",
+      "question": "What is the FY2017 - FY2019 3 year average of capex as a % of revenue for Activision Blizzard? Answer in units of percents and round to one decimal place. Calculate (or extract) the answer from the statement of income and the cash flow statement.",
+      "result": {
+        "status": "not_found",
+        "document": "ACTIVISIONBLIZZARD_2019_10K",
+        "page": 207,
+        "confidence": 0,
+        "model": "OpenAI ChatGPT 4.1-mini",
+        "answer": "LLM answer generation failed: Error code: 401 - {'error': {'message': 'Incorrect API key provided: your_ope************here. You can find your API key at https://platform.openai.com/account/api-keys.', 'type': 'invalid_request_error', 'param': None, 'code': 'invalid_api_key'}}",
+        "citation": "Source: ACTIVISIONBLIZZARD_2019_10K, page 207"
+      },
+      "score": {
+        "points": 0,
+        "label": "not_found_or_abstained",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 1348
+    }
+  ]
+}

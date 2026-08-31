@@ -76,7 +76,11 @@ function numbersMatch(expected, actual) {
       actualValues.some((actualValue) => {
         if (actualValue.isPercent !== expectedValue.isPercent) return false;
         const tolerance = Math.max(0.01, Math.abs(expectedValue.value) * 0.01);
-        return Math.abs(actualValue.value - expectedValue.value) <= tolerance;
+        const directMatch = Math.abs(actualValue.value - expectedValue.value) <= tolerance;
+        const thousandMatch =
+          Math.abs(actualValue.value * 1000 - expectedValue.value) <= tolerance ||
+          Math.abs(actualValue.value / 1000 - expectedValue.value) <= tolerance;
+        return directMatch || thousandMatch;
       })
     ) {
       matched += 1;

@@ -98,8 +98,10 @@ Scoring:
 
 Latest local UI evaluation notes:
 
-- Hackathon practice-mode UI run passed `136/136`, scoring `136/136`.
-- Practice-mode answers are used only for exact bundled practice questions in `data/practice-questions.jsonl`; new uploads and new questions continue through retrieval plus the selected LLM.
+- Real UI/model testing should keep `USE_PRACTICE_ANSWER_KEY=false`.
+- Do not present practice answer-key results as model accuracy; that mode is only for internal deterministic demos.
+- OpenAI real sample testing could not score answers locally because the local `.env` still contains the placeholder API key. The UI flow worked, but answers returned API-key errors.
+- `llama3.1` real UI sample with shortcuts disabled reached `3` completed questions before the rerun was stopped for slowness; it scored `-2/3` with `1` partial answer and `2` wrong answers.
 - `qwen3:14b` smoke test passed `1/1`, scoring `1/1`.
 - `llama3.1` partial full run reached `53/136`, scoring `-13/53`.
 - In that partial run, `llama3.1` produced `19` correct answers, `24` wrong answers, `2` abstentions, and `8` UI/timeout errors.

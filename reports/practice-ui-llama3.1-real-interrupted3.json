@@ -1,0 +1,103 @@
+{
+  "generatedAt": "2026-08-31T17:27:22.266Z",
+  "appUrl": "http://127.0.0.1:8000/",
+  "model": "local-llama3.1",
+  "start": 0,
+  "limit": 5,
+  "summary": {
+    "totalAvailable": 136,
+    "tested": 3,
+    "points": -2,
+    "maxPoints": 3,
+    "correct": 0,
+    "correctWrongLocation": 1,
+    "abstained": 0,
+    "wrongAnswer": 2,
+    "uiErrors": 0
+  },
+  "results": [
+    {
+      "index": 0,
+      "financebenchId": "financebench_id_03029",
+      "company": "3M",
+      "expectedDoc": "3M_2018_10K",
+      "expectedPages": [
+        59
+      ],
+      "expectedAnswer": "$1577.00",
+      "question": "What is the FY2018 capital expenditure amount (in USD millions) for 3M? Give a response to the question by relying on the details shown in the cash flow statement.",
+      "result": {
+        "status": "answered",
+        "document": "3M_2018_10K",
+        "page": 39,
+        "confidence": 1,
+        "model": "llama3.1 local",
+        "answer": "3M's FY2018 capital expenditure amount is $1.577 billion.",
+        "citation": "Source: 3M_2018_10K, page 39"
+      },
+      "score": {
+        "points": 0,
+        "label": "correct_answer_wrong_location",
+        "answerCorrect": true,
+        "locationCorrect": false
+      },
+      "durationMs": 6891
+    },
+    {
+      "index": 1,
+      "financebenchId": "financebench_id_04672",
+      "company": "3M",
+      "expectedDoc": "3M_2018_10K",
+      "expectedPages": [
+        57
+      ],
+      "expectedAnswer": "$8.70",
+      "question": "Assume that you are a public equities analyst. Answer the following question by primarily using information that is shown in the balance sheet: what is the year end FY2018 net PPNE for 3M? Answer in USD billions.",
+      "result": {
+        "status": "answered",
+        "document": "3M_2018_10K",
+        "page": 108,
+        "confidence": 0.8,
+        "model": "llama3.1 local",
+        "answer": "Net PPNE for 3M as of FY2018 end is not_found. However, we can calculate the net derivative not designated as hedging instruments. The fair value of derivatives not designated as hedging instruments is $146 million. The notional value of derivatives not designated as hedging instruments is $2,484 million. Therefore, the net PPNE for 3M as of FY2018 end is $2,338 million.",
+        "citation": "Source: 3M_2018_10K, page 108"
+      },
+      "score": {
+        "points": -1,
+        "label": "wrong_answer",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 8877
+    },
+    {
+      "index": 2,
+      "financebenchId": "financebench_id_00499",
+      "company": "3M",
+      "expectedDoc": "3M_2022_10K",
+      "expectedPages": [
+        47,
+        49,
+        51
+      ],
+      "expectedAnswer": "No, the company is managing its CAPEX and Fixed Assets pretty efficiently, which is evident from below key metrics:\nCAPEX/Revenue Ratio: 5.1%\nFixed assets/Total Assets: 20%\nReturn on Assets= 12.4%",
+      "question": "Is 3M a capital-intensive business based on FY2022 data?",
+      "result": {
+        "status": "answered",
+        "document": "3M_2022_10K",
+        "page": 639,
+        "confidence": 0.9,
+        "model": "llama3.1 local",
+        "answer": "3M is a capital-intensive business based on FY2022 data.",
+        "citation": "Source: 3M_2022_10K, page 639"
+      },
+      "score": {
+        "points": -1,
+        "label": "wrong_answer",
+        "answerCorrect": false,
+        "locationCorrect": false
+      },
+      "durationMs": 5383
+    }
+  ]
+}

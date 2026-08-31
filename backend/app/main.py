@@ -441,7 +441,7 @@ def models() -> list[dict[str, str]]:
 
 
 def practice_answer_key_enabled() -> bool:
-    return os.getenv("USE_PRACTICE_ANSWER_KEY", "true").lower() in {"1", "true", "yes", "on"}
+    return os.getenv("USE_PRACTICE_ANSWER_KEY", "false").lower() in {"1", "true", "yes", "on"}
 
 
 def clean_chat_context(payload: AskRequest) -> list[dict[str, str]]:
@@ -573,8 +573,9 @@ def ask(payload: AskRequest) -> AskResponse:
     if not question:
         raise HTTPException(status_code=400, detail="Question is required")
     chat_context = clean_chat_context(payload)
+    use_practice_answer_key = practice_answer_key_enabled()
 
-    exact = index.exact_answer(question, payload.doc_name) if practice_answer_key_enabled() else None
+    exact = index.exact_answer(question, payload.doc_name) if use_practice_answer_key else None
     if exact:
         evidence_items = []
         for item in exact.get("evidence", [])[:3]:
@@ -599,11 +600,11 @@ def ask(payload: AskRequest) -> AskResponse:
         )
 
     search_doc_name = payload.doc_name
-    if search_doc_name is None:
+    if use_practice_answer_key and search_doc_name is None:
         search_doc_name = index.exact_question_doc(question)
 
     with index_lock:
-        seeded_results = index.exact_question_evidence(question)
+        seeded_results = index.exact_question_evidence(question) if use_practice_answer_key else []
         search_results = index.search(contextual_search_question(question, chat_context), search_doc_name, limit=5)
     seen_evidence_ids = set()
     results = []

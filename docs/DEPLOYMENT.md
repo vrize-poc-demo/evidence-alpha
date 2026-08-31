@@ -47,7 +47,7 @@ LLM_PROVIDER=openai
 OPENAI_API_KEY=<set in Render dashboard>
 LLM_MODEL=gpt-4.1-mini
 USE_LLM=true
-USE_PRACTICE_ANSWER_KEY=true
+USE_PRACTICE_ANSWER_KEY=false
 OLLAMA_BASE_URL=http://localhost:11434/v1
 ```
 
