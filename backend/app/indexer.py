@@ -81,6 +81,10 @@ def tokenize(text: str) -> list[str]:
     return [word.strip(".-") for word in words if len(word.strip(".-")) > 1 and word not in STOPWORDS]
 
 
+def compact_text(text: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "", text.lower())
+
+
 def clean_text(raw_html: str) -> str:
     if BeautifulSoup is not None:
         soup = BeautifulSoup(raw_html, "html.parser")
@@ -246,14 +250,66 @@ class FilingIndex:
             )
         return summaries
 
+    def _doc_aliases(self, doc_name: str) -> set[str]:
+        meta = self.metadata.get(doc_name, {})
+        aliases = {doc_name}
+        if meta.get("company"):
+            aliases.add(str(meta["company"]))
+
+        company_part = re.split(r"_(?:19|20)\d{2}|_10[QK]|_8K", doc_name, maxsplit=1, flags=re.I)[0]
+        aliases.add(company_part)
+        aliases.add(company_part.replace("_", " "))
+        aliases.add(company_part.replace("_", ""))
+        return {compact_text(alias) for alias in aliases if compact_text(alias)}
+
+    def _doc_query_hints(self, question: str) -> dict[str, float]:
+        compact_question = compact_text(question)
+        years = set(re.findall(r"\b(?:19|20)\d{2}\b", question))
+        doc_type_hints = set()
+        if re.search(r"\b10\s*[-]?\s*k\b", question, flags=re.I):
+            doc_type_hints.add("10k")
+        if re.search(r"\b10\s*[-]?\s*q\b", question, flags=re.I):
+            doc_type_hints.add("10q")
+        if re.search(r"\b8\s*[-]?\s*k\b", question, flags=re.I):
+            doc_type_hints.add("8k")
+
+        hints: dict[str, float] = {}
+        for doc_name in self.by_doc:
+            score = 0.0
+            for alias in self._doc_aliases(doc_name):
+                if len(alias) >= 2 and alias in compact_question:
+                    score = max(score, 5.0 if len(alias) > 3 else 3.0)
+
+            meta = self.metadata.get(doc_name, {})
+            doc_period = str(meta.get("doc_period") or "")
+            if years and (doc_period in years or any(year in doc_name for year in years)):
+                score += 3.0
+
+            doc_type = compact_text(str(meta.get("doc_type") or ""))
+            if doc_type_hints and (doc_type in doc_type_hints or any(kind.upper() in doc_name.upper() for kind in doc_type_hints)):
+                score += 1.5
+
+            if score >= 5.0:
+                hints[doc_name] = score
+        return hints
+
     def search(self, question: str, doc_name: str | None = None, limit: int = 5) -> list[tuple[Chunk, float]]:
         query_tokens = tokenize(question)
         if not query_tokens:
             return []
         query_counts = Counter(query_tokens)
         candidate_chunks: Iterable[Chunk] = self.chunks
+        doc_hints: dict[str, float] = {}
         if doc_name:
             candidate_chunks = self.by_doc.get(doc_name, [])
+        else:
+            doc_hints = self._doc_query_hints(question)
+            if doc_hints:
+                hinted_chunks = []
+                for hinted_doc_name in doc_hints:
+                    hinted_chunks.extend(self.by_doc.get(hinted_doc_name, []))
+                if hinted_chunks:
+                    candidate_chunks = hinted_chunks
 
         total_docs = max(len(self.chunks), 1)
         scored: list[tuple[Chunk, float]] = []
@@ -270,7 +326,10 @@ class FilingIndex:
                 score += query_count * (1 + math.log(frequency)) * idf
             if score > 0:
                 length_penalty = 1 / math.sqrt(max(len(chunk.tokens), 80) / 80)
-                scored.append((chunk, round(score * length_penalty, 4)))
+                score *= length_penalty
+                if chunk.doc_name in doc_hints:
+                    score = score * (1 + doc_hints[chunk.doc_name] / 8) + doc_hints[chunk.doc_name]
+                scored.append((chunk, round(score, 4)))
 
         scored.sort(key=lambda item: item[1], reverse=True)
         return scored[:limit]

@@ -4,6 +4,7 @@ set -eu
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BACKEND_PORT="${BACKEND_PORT:-8000}"
 FRONTEND_PORT="${FRONTEND_PORT:-5173}"
+BACKEND_RELOAD="${BACKEND_RELOAD:-0}"
 
 cleanup() {
   echo ""
@@ -37,7 +38,11 @@ if [ ! -f ".env" ]; then
   echo "Created backend/.env. Add OPENAI_API_KEY for OpenAI answers."
 fi
 
-uvicorn app.main:app --reload --host 127.0.0.1 --port "$BACKEND_PORT" &
+if [ "$BACKEND_RELOAD" = "1" ]; then
+  uvicorn app.main:app --reload --host 127.0.0.1 --port "$BACKEND_PORT" &
+else
+  uvicorn app.main:app --host 127.0.0.1 --port "$BACKEND_PORT" &
+fi
 BACKEND_PID="$!"
 
 cd "$ROOT_DIR/frontend"
