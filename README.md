@@ -12,6 +12,17 @@ Evidence Alpha is a React + FastAPI proof-of-solution app for answering analyst 
 - Evidence drawer with document/page citations
 - Local SEC HTML indexing from the copied dataset
 
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Feature Guide](docs/FEATURES.md)
+- [Requirements From Prompt](docs/REQUIREMENTS.md)
+- [Approach Note](docs/APPROACH.md)
+- [Sample Questions](docs/SAMPLE_QUESTIONS.md)
+- [Testing](docs/TESTING.md)
+- [Demo Script](docs/DEMO_SCRIPT.md)
+- [Deployment](docs/DEPLOYMENT.md)
+
 ## Project Structure
 
 ```text
@@ -170,6 +181,23 @@ Health check:
 curl http://localhost:8000/health
 ```
 
+## Test The Project
+
+Run the smoke test:
+
+```bash
+python3 scripts/smoke_test.py
+```
+
+The smoke test checks:
+
+- health endpoint
+- model dropdown options
+- copied filings index
+- global processor endpoint
+- sample question answer with evidence
+- multiple-file upload processor
+
 ## Run The Frontend
 
 Open a second terminal:
@@ -189,10 +217,12 @@ http://localhost:5173
 ## Demo Flow
 
 1. Start backend and frontend.
-2. Select an indexed filing from the left panel.
-3. Ask an analyst question.
-4. Review the answer, confidence, source document, page number, and evidence.
-5. Upload a new SEC `.htm` or `.html` filing using **Add filing**.
+2. Open the dashboard.
+3. Upload one or many SEC `.htm` or `.html` filings.
+4. Watch the global processor.
+5. Open Ask, select a filing and model.
+6. Ask an analyst question.
+7. Review the answer, confidence, source document, page number, and evidence.
 
 By default, every question retrieves filing evidence and sends only that evidence to the configured LLM. If the evidence is weak, the LLM is instructed to return `Not found in this filing.`
 

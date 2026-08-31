@@ -4,6 +4,77 @@
 
 Build a trustworthy analyst copilot over SEC filings. The app should answer only when evidence is available and should show the source document, page, and supporting passage.
 
+## System Diagram
+
+```mermaid
+flowchart LR
+    User["Reviewer / analyst"] --> UI["React web app"]
+    UI --> API["FastAPI backend"]
+    API --> Parser["SEC HTML parser"]
+    Parser --> Index["Local evidence index"]
+    API --> Search["BM25-style retriever"]
+    Search --> Index
+    Search --> Evidence["Top evidence chunks"]
+    Evidence --> LLM["Selected LLM"]
+    LLM --> API
+    API --> UI
+    UI --> History["Browser chat history"]
+```
+
+## Upload And Processing Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as React UI
+    participant API as FastAPI
+    participant P as Global Processor
+    participant I as Evidence Index
+
+    U->>UI: Upload one or many filings
+    UI->>API: POST /filings/upload-multiple
+    API->>P: Create queued jobs
+    P->>P: Parse SEC HTML
+    P->>I: Add chunks and metadata
+    UI->>API: Poll GET /processor
+    API-->>UI: queued / processing / complete / failed
+    UI->>API: Refresh GET /filings
+```
+
+## Question Answering Flow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant UI as Ask Page
+    participant API as FastAPI
+    participant R as Retriever
+    participant L as LLM
+
+    U->>UI: Ask question
+    UI->>API: POST /ask with filing and model choice
+    API->>R: Search selected filing
+    R-->>API: Evidence chunks with pages
+    API->>L: Question plus evidence only
+    L-->>API: JSON answer or not_found
+    API-->>UI: Answer, confidence, document, page, evidence
+```
+
+## Deployment Modes
+
+```mermaid
+flowchart TB
+    subgraph Render["Render version"]
+      RUI["React + FastAPI Docker service"] --> OAI["OpenAI gpt-4.1-mini"]
+    end
+
+    subgraph Local["Local version"]
+      LUI["React + FastAPI on reviewer machine"] --> OAI2["OpenAI gpt-4.1-mini"]
+      LUI --> QWEN["Ollama qwen3:14b"]
+      LUI --> LLAMA["Ollama llama3.1"]
+    end
+```
+
 ## Data
 
 The copied dataset lives in `data/`:

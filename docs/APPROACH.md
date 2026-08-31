@@ -55,6 +55,18 @@ Use `practice-questions.jsonl` to measure:
 - semantic answer quality for reasoning questions
 - abstention quality for unsupported questions
 
+## Current Smoke Test Coverage
+
+The current automated smoke test validates:
+
+- three real practice questions
+- exact expected filing citations
+- exact expected evidence pages
+- unsupported question not-found behavior
+- multiple-file upload processing
+
+See `docs/TESTING.md`.
+
 ## Recommended Next Implementation
 
 The best production direction is a hybrid retrieval system:

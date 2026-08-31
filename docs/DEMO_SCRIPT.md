@@ -21,7 +21,7 @@ Open `http://localhost:5173`.
 
 ## Demo Story
 
-1. Show indexed SEC filings in the left panel.
+1. Show indexed SEC filings and evidence chunk counts on the dashboard.
 2. Show the dashboard metrics and model status.
 3. Open Upload and select one or many `.htm` filings.
 4. Show the global processor status.
