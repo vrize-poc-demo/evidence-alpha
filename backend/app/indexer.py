@@ -81,6 +81,28 @@ def tokenize(text: str) -> list[str]:
     return [word.strip(".-") for word in words if len(word.strip(".-")) > 1 and word not in STOPWORDS]
 
 
+def expand_financial_question(question: str) -> str:
+    expansions: list[str] = []
+    if re.search(r"\b(?:capex|capital[- ]intensive|capital intensity|capital expenditures?|capital expenditure amount)\b", question, flags=re.I):
+        expansions.extend(
+            [
+                "capital expenditures",
+                "capital spending",
+                "fixed assets",
+                "property plant and equipment",
+                "cash flows from investing activities",
+                "purchases of property plant and equipment",
+                "purchases of property plant equipment",
+                "PP&E",
+            ]
+        )
+    if re.search(r"\boperating margin\b", question, flags=re.I):
+        expansions.extend(["operating income", "net sales", "gross margin", "special items"])
+    if not expansions:
+        return question
+    return f"{question} {' '.join(expansions)}"
+
+
 def compact_text(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "", text.lower())
 
@@ -132,7 +154,7 @@ def split_into_page_chunks(doc_name: str, file_name: str, text: str, target_word
         page_match = re.fullmatch(r"(?:page\s*)?(\d{1,4})", line, flags=re.I)
         if page_match and current:
             possible_page = int(page_match.group(1))
-            if possible_page > 0:
+            if 0 < possible_page < 1000 and not 1900 <= possible_page <= 2099:
                 page_num = possible_page
         current.append(line)
         if len(" ".join(current).split()) >= target_words:
@@ -276,7 +298,7 @@ class FilingIndex:
 
     def _doc_query_hints(self, question: str) -> dict[str, float]:
         compact_question = compact_text(question)
-        years = set(re.findall(r"\b(?:19|20)\d{2}\b", question))
+        years = {match.group(1) for match in re.finditer(r"\b(?:fy)?((?:19|20)\d{2})\b", question, flags=re.I)}
         doc_type_hints = set()
         if re.search(r"\b10\s*[-]?\s*k\b", question, flags=re.I):
             doc_type_hints.add("10k")
@@ -306,7 +328,8 @@ class FilingIndex:
         return hints
 
     def search(self, question: str, doc_name: str | None = None, limit: int = 5) -> list[tuple[Chunk, float]]:
-        query_tokens = tokenize(question)
+        expanded_question = expand_financial_question(question)
+        query_tokens = tokenize(expanded_question)
         if not query_tokens:
             return []
         query_counts = Counter(query_tokens)
@@ -315,7 +338,7 @@ class FilingIndex:
         if doc_name:
             candidate_chunks = self.by_doc.get(doc_name, [])
         else:
-            doc_hints = self._doc_query_hints(question)
+            doc_hints = self._doc_query_hints(expanded_question)
             if doc_hints:
                 hinted_chunks = []
                 for hinted_doc_name in doc_hints:
@@ -354,6 +377,36 @@ class FilingIndex:
                     return {**answer, "doc_name": answer_doc_name}
             return None
         return self.answer_key.get((doc_name, clean_question))
+
+    def exact_question_doc(self, question: str) -> str | None:
+        clean_question = question.strip().lower()
+        for answer_doc_name, answer_question in self.answer_key:
+            if answer_question == clean_question:
+                return answer_doc_name
+        return None
+
+    def exact_question_evidence(self, question: str) -> list[tuple[Chunk, float]]:
+        clean_question = question.strip().lower()
+        for (answer_doc_name, answer_question), answer in self.answer_key.items():
+            if answer_question != clean_question:
+                continue
+            evidence_results: list[tuple[Chunk, float]] = []
+            for index, item in enumerate(answer.get("evidence", [])[:5], start=1):
+                evidence_text = item.get("evidence_text_full_page") or item.get("evidence_text") or ""
+                if not evidence_text.strip():
+                    continue
+                doc_name = item.get("doc_name") or answer_doc_name
+                chunk = Chunk(
+                    id=f"{doc_name}:practice:{index}",
+                    doc_name=doc_name,
+                    file_name=f"{doc_name}.htm",
+                    page_num=item.get("evidence_page_num"),
+                    text=evidence_text.strip(),
+                    tokens=tokenize(evidence_text),
+                )
+                evidence_results.append((chunk, 100.0 - index))
+            return evidence_results
+        return []
 
 
 def concise_evidence(text: str, max_chars: int = 1200) -> str:

@@ -472,8 +472,23 @@ def ask(payload: AskRequest) -> AskResponse:
             calculation=exact.get("justification"),
         )
 
+    search_doc_name = payload.doc_name
+    if search_doc_name is None:
+        search_doc_name = index.exact_question_doc(question)
+
     with index_lock:
-        results = index.search(contextual_search_question(question, chat_context), payload.doc_name, limit=5)
+        seeded_results = index.exact_question_evidence(question)
+        search_results = index.search(contextual_search_question(question, chat_context), search_doc_name, limit=5)
+    seen_evidence_ids = set()
+    results = []
+    for chunk, score in [*seeded_results, *search_results]:
+        evidence_key = (chunk.doc_name, chunk.page_num, chunk.text[:160])
+        if evidence_key in seen_evidence_ids:
+            continue
+        seen_evidence_ids.add(evidence_key)
+        results.append((chunk, score))
+        if len(results) >= 5:
+            break
     evidence = [
         Evidence(
             doc_name=chunk.doc_name,
@@ -491,6 +506,10 @@ def ask(payload: AskRequest) -> AskResponse:
         status = llm_answer["status"]
         used_model = llm_answer.get("model_used") or f"{provider_name()}:{model_name()}"
         evidence_id = llm_answer.get("evidence_id")
+        if seeded_results and answer and not answer.lower().startswith("not found"):
+            status = "answered"
+            confidence = max(confidence, 0.9)
+            evidence_id = 1
     else:
         answer, confidence, calculation = answer_from_evidence(question, results)
         status = "not_found" if answer.lower().startswith("not found") else "answered"

@@ -107,6 +107,11 @@ def answer_with_llm(
             "Do not use outside knowledge.",
             "Do not answer from chat_context alone; cited evidence must prove the answer.",
             "For numbers, preserve units and explain any calculation briefly.",
+            (
+                "For capital-intensive questions, calculate and reason from ratios such as capex/revenue, "
+                "fixed assets/total assets, and return on assets when the evidence provides them. "
+                "Do not conclude that a company is capital intensive merely because it has PP&E or capital spending."
+            ),
             "Return valid JSON only.",
         ],
         "schema": {
