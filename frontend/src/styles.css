@@ -458,10 +458,17 @@ button {
   border-top: 1px solid #edf2ee;
 }
 
-.localModelControls > p {
+.localModelControls > p,
+.openAISetupControls > p {
   color: #607169;
   line-height: 1.45;
   margin: 0 0 14px;
+}
+
+.openAISetupControls {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #edf2ee;
 }
 
 .secondaryLink,
@@ -544,6 +551,21 @@ button {
   color: #607169;
   line-height: 1.4;
   margin-top: 3px;
+}
+
+.envBlock {
+  max-width: 100%;
+  overflow-x: auto;
+  margin: 10px 0 0;
+  padding: 10px;
+  border: 1px solid #dfe6dd;
+  border-radius: 7px;
+  background: #f7faf8;
+  color: #1d2529;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
 .modelAction {

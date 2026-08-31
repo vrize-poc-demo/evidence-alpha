@@ -99,6 +99,16 @@ Health check:    http://127.0.0.1:8000/health
 
 The backend root `http://127.0.0.1:8000/` intentionally serves the React app. Use `/docs`, `/api`, or `/health` when you want backend pages.
 
+## OpenAI Key Setup
+
+OpenAI ChatGPT 4.1-mini is the default model. If the key is missing or still set to the placeholder value, open Service Health in the app. It shows step-by-step setup for:
+
+- creating or opening an OpenAI API key
+- setting `OPENAI_API_KEY` in `backend/.env`
+- setting `OPENAI_API_KEY` in Render environment variables
+- restarting the backend or Render service
+- refreshing Health to confirm the model is ready
+
 ## Local Model Option
 
 Local models are optional. OpenAI ChatGPT 4.1-mini is the default and easiest reviewer mode.

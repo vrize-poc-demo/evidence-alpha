@@ -167,6 +167,14 @@ OpenAI mode uses:
 
 This is the recommended hosted demo mode because it works on Render and does not require a local machine with enough memory for large models.
 
+If the key is missing or still uses the placeholder value, Service Health shows OpenAI Setup steps:
+
+- open the OpenAI API keys page
+- paste the key into `backend/.env` for local runs
+- set `OPENAI_API_KEY` in Render for hosted runs
+- restart the backend or Render service
+- refresh health to confirm the model is ready
+
 ## Local Ollama Mode
 
 Local mode uses Ollama on the reviewer's machine.

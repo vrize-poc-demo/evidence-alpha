@@ -9,6 +9,7 @@ import {
   FileSearch,
   FileUp,
   History,
+  KeyRound,
   LayoutDashboard,
   MessageSquare,
   Plus,
@@ -502,6 +503,7 @@ function HealthSummary({
   const [deleting, setDeleting] = useState(false);
   const services = serviceHealth?.services || [];
   const overall = serviceHealth?.status || "checking";
+  const selectedModelHealth = services.find((service) => service.name === modelLabel(selectedModel));
 
   async function submitDelete() {
     setDeleting(true);
@@ -562,6 +564,9 @@ function HealthSummary({
           selectedModel={selectedModel}
         />
       )}
+      {expanded && selectedModel === "openai-gpt-4.1-mini" && (
+        <OpenAISetupControls selectedModelHealth={selectedModelHealth} />
+      )}
       {expanded && deleteAllDocuments && (
         <section className="dangerZone">
           <div>
@@ -602,6 +607,94 @@ function HealthSummary({
               </button>
             </div>
           </section>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function OpenAISetupControls({ selectedModelHealth }) {
+  const [copied, setCopied] = useState("");
+  const ready = selectedModelHealth?.status === "ok";
+  const envText = [
+    "LLM_PROVIDER=openai",
+    "OPENAI_API_KEY=your_openai_api_key_here",
+    "OLLAMA_BASE_URL=http://localhost:11434/v1",
+    "LLM_MODEL=gpt-4.1-mini",
+    "USE_LLM=true",
+    "USE_PRACTICE_ANSWER_KEY=false",
+  ].join("\n");
+
+  async function copyText(text, label) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(label);
+      window.setTimeout(() => setCopied(""), 1600);
+    } catch {
+      setCopied("");
+    }
+  }
+
+  return (
+    <section className="openAISetupControls">
+      <div className="panelTitle">
+        <h3>OpenAI Setup</h3>
+        <span className={`healthPill ${ready ? "ok" : "warning"}`}>{ready ? "Ready" : "Key needed"}</span>
+      </div>
+      <p>
+        Use this setup when ChatGPT 4.1-mini is selected. The API key must be configured on the backend, then the backend must restart.
+      </p>
+      <div className="localSetupSteps">
+        <article className="setupStep warning">
+          <span>{ready ? <CheckCircle2 size={18} /> : "1"}</span>
+          <div>
+            <strong>Create or use an OpenAI API key</strong>
+            <small>Open the API keys page, create a project key, and keep it private.</small>
+          </div>
+          <a className="secondaryLink" href="https://platform.openai.com/api-keys" target="_blank" rel="noreferrer">
+            <KeyRound size={18} />
+            API keys
+            <ExternalLink size={15} />
+          </a>
+        </article>
+
+        <article className={`setupStep ${ready ? "complete" : "warning"}`}>
+          <span>{ready ? <CheckCircle2 size={18} /> : "2"}</span>
+          <div>
+            <strong>Set backend/.env locally</strong>
+            <small>Paste the key into backend/.env on the machine running FastAPI.</small>
+            <pre className="envBlock">{envText}</pre>
+          </div>
+          <button className="secondaryAction compactAction" onClick={() => copyText(envText, "env")}>
+            <KeyRound size={18} />
+            {copied === "env" ? "Copied" : "Copy env"}
+          </button>
+        </article>
+
+        <article className={`setupStep ${ready ? "complete" : "warning"}`}>
+          <span>{ready ? <CheckCircle2 size={18} /> : "3"}</span>
+          <div>
+            <strong>Set Render secret for hosted demo</strong>
+            <small>In Render, add OPENAI_API_KEY under Environment for the evidence-alpha service, then redeploy or restart.</small>
+          </div>
+          <a className="secondaryLink" href="https://dashboard.render.com/web/srv-daam2buk1f9s73as2h5g/env" target="_blank" rel="noreferrer">
+            <KeyRound size={18} />
+            Render env
+            <ExternalLink size={15} />
+          </a>
+        </article>
+
+        <article className={`setupStep ${ready ? "complete" : "warning"}`}>
+          <span>{ready ? <CheckCircle2 size={18} /> : "4"}</span>
+          <div>
+            <strong>Restart and refresh health</strong>
+            <small>After changing the key, restart the backend or Render service, then click Refresh on this page.</small>
+          </div>
+        </article>
+      </div>
+      {!ready && (
+        <div className="modelNotice warningNotice">
+          {selectedModelHealth?.message || "OPENAI_API_KEY is not configured yet."}
         </div>
       )}
     </section>

@@ -130,9 +130,10 @@ def selected_model_health(model_choice: str | None) -> ServiceHealthItem:
         return ollama_health(model_choice)
     if not llm_enabled():
         return service_item("LLM generation", "warning", "USE_LLM is disabled", "Evidence retrieval still works")
-    if os.getenv("OPENAI_API_KEY"):
+    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+    if api_key and api_key != "your_openai_api_key_here":
         return service_item(label, "ok", "API key configured", selected_model)
-    return service_item(label, "warning", "OPENAI_API_KEY is not set", selected_model)
+    return service_item(label, "warning", "OPENAI_API_KEY is not set or still uses the placeholder value", selected_model)
 
 
 def set_local_model_job(model_choice: str, model: str, status: str, message: str) -> LocalModelJob:
