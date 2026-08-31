@@ -11,7 +11,5 @@ services:
         value: gpt-4.1-mini
       - key: USE_LLM
         value: true
-      - key: USE_PRACTICE_ANSWER_KEY
-        value: false
       - key: OPENAI_API_KEY
         sync: false
