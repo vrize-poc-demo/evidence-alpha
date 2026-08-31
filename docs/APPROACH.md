@@ -10,11 +10,15 @@ Evidence Alpha is a React + FastAPI demo app with:
 
 - all-filings search
 - filing upload
+- multiple-file upload
 - local SEC HTML parsing
 - local indexing
 - LLM answer generation
 - analyst chat
+- per-chat follow-up memory
 - cited evidence
+- Service Health model selection
+- OpenAI and local Ollama model options
 - conservative `Not found in the indexed filings` behavior
 
 ## Why HTML Parsing
@@ -28,7 +32,8 @@ For the first proof-of-solution, we kept:
 - page/chunk-level evidence retrieval
 - optional answer-key support for controlled benchmark demos
 - simple local indexing
-- OpenAI LLM generation from retrieved evidence
+- OpenAI LLM generation from retrieved evidence for hosted demos
+- optional local Ollama generation for local demos
 - clean demo UI
 - explicit evidence display
 
@@ -42,6 +47,8 @@ The current app does not yet include:
 - automated benchmark scoring
 
 It also does not train or fine-tune a model. The app uses retrieval-augmented generation: retrieve evidence first, then ask the LLM to answer from that evidence.
+
+Chat history is used only as local conversation context for follow-up questions. The answer still has to be supported by retrieved filing evidence, and a new chat does not inherit memory from another chat.
 
 These are the right next upgrades after the client demo proves the workflow.
 

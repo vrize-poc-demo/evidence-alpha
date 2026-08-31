@@ -52,3 +52,15 @@ The filings are SEC HTML filings, not PDFs.
 | Ability to decline | `not_found` response path |
 | README to run app | Root `README.md` |
 | One-page approach note | `docs/APPROACH.md` |
+
+## Extra Demo Features
+
+| Demo Need | Evidence Alpha Feature |
+| --- | --- |
+| Ask across all uploaded filings | Ask page searches the full active index automatically |
+| Use chat history carefully | Follow-up questions use only the active chat's prior messages |
+| Keep chats separate | New chats do not share memory with old chats |
+| Support hosted and local LLMs | Service Health model selector for OpenAI, qwen3:14b, and llama3.1 |
+| Show local model setup | Service Health Ollama status and setup controls |
+| Clear demo data safely | Document reset flow requiring typed `DELETE` confirmation |
+| Help non-technical reviewers | `README.md`, `docs/REVIEWER_GUIDE.md`, and `docs/DEMO_SCRIPT.md` |

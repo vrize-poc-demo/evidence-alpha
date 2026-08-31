@@ -1,107 +1,109 @@
-# Temporary Demo And Reviewer Deployment
+# Deployment
 
-## Reviewer Clone Workflow
+Evidence Alpha supports two demo modes:
 
-The other reviewer can clone the repo and run it locally without copying any extra dataset manually, as long as `data/` is committed to GitHub.
+- hosted Render demo for reviewers who do not want to run local servers
+- local demo for reviewers who clone the repo
 
-They need:
+## Published Render Demo
 
-- Python 3.11+
-- Node.js 20+
-- npm
-- an LLM API key
+- App: https://evidence-alpha.onrender.com
+- Health: https://evidence-alpha.onrender.com/health
+- API docs: https://evidence-alpha.onrender.com/docs
+- Render dashboard: https://dashboard.render.com/web/srv-daam2buk1f9s73as2h5g/events
 
-Recommended easiest reviewer LLM provider:
+The service may sleep on the free Render plan. If the first request is slow or times out, wait 30-60 seconds and refresh.
+
+## Render Architecture
+
+The included `render.yaml` defines one web service named `evidence-alpha`.
+
+Render uses the included `Dockerfile`:
+
+1. Install frontend dependencies.
+2. Build the React app.
+3. Install backend dependencies.
+4. Run FastAPI.
+5. Serve both the API and the built React frontend from the same backend service.
+
+This keeps the demo simple because reviewers only need one public URL.
+
+## Render Environment Variables
+
+Set these in Render:
 
 ```text
 LLM_PROVIDER=openai
-OPENAI_API_KEY=your_openai_key
+OPENAI_API_KEY=<set in Render dashboard>
 LLM_MODEL=gpt-4.1-mini
 USE_LLM=true
 USE_PRACTICE_ANSWER_KEY=false
+OLLAMA_BASE_URL=http://localhost:11434/v1
 ```
 
-This is paid API usage, but for 3-10 reviewers asking a modest number of questions it should usually stay far below a ₹1,000 budget. Set a low usage limit in the provider billing dashboard before sharing the project.
+`OPENAI_API_KEY` should be added as a secret environment variable. Do not commit a real key.
 
-The first backend startup rebuilds `backend/.index/chunks.json` from `data/filings`.
+## Render Model Behavior
 
-## Hosted Free/Low-Cost Path
+Render should use OpenAI ChatGPT 4.1-mini.
 
-For a 1-2 week client demo that may not run on your own machine, use:
+The app still shows the local model choices because the same UI is used for local and hosted demos. If a reviewer selects a local model on Render, Service Health explains that local Ollama models only work on a local machine.
 
-- Render Free Web Service for the FastAPI backend and React frontend
-- OpenAI API key for hosted LLM inference
+## Local Deployment
 
-This avoids running a local LLM on your laptop.
+Clone:
 
-## Why This Path
+```bash
+git clone git@github.com:vrize-poc-demo/evidence-alpha.git
+cd evidence-alpha
+```
 
-The app needs CPU/RAM for HTML parsing and indexing, but not GPU compute if the LLM is hosted. The filing dataset is about 336 MB and the generated local index is about 70 MB. On first startup, the backend can rebuild the index from `data/filings`.
+Install:
 
-## Important Free-Tier Limits
+```bash
+./scripts/setup.sh
+```
 
-Free hosting is enough for a demo, but not production:
+Run:
 
-- Free web services can sleep after inactivity.
-- Files uploaded at runtime may disappear after redeploy/restart on ephemeral hosts.
-- Free LLM APIs have rate limits.
-- Accuracy depends more on retrieval quality and model quality than hosting.
+```bash
+./scripts/start_app.sh
+```
 
-For the demo, keep the provided filings committed under `data/filings` and use uploads only during the live session.
+Open:
 
-## Environment Variables
+```text
+http://127.0.0.1:5173
+```
 
 Backend:
 
 ```text
-LLM_PROVIDER=openai
-OPENAI_API_KEY=your_openai_key
-OLLAMA_BASE_URL=http://localhost:11434/v1
-LLM_MODEL=gpt-4.1-mini
-USE_LLM=true
-USE_PRACTICE_ANSWER_KEY=false
+http://127.0.0.1:8000/api
+http://127.0.0.1:8000/docs
+http://127.0.0.1:8000/health
 ```
 
-Frontend:
+## Data Persistence
 
-```text
-VITE_API_URL=https://your-backend-url
-```
+Committed data:
 
-## Accuracy Settings
+- `data/filings`
+- `data/practice-questions.jsonl`
 
-For better accuracy:
+Generated local data:
 
-- Send only the top retrieved evidence chunks to the LLM.
-- Keep `temperature=0`.
-- Use OpenAI for the hosted review path when accuracy matters.
-- Ask the LLM to return `not_found` when evidence is insufficient.
-- Use optional benchmark mode only for controlled evaluation, not live LLM behavior.
+- `backend/.index/chunks.json`
+- `backend/uploads`
 
-## Supported Model Options
+Render free services have ephemeral storage. Runtime uploads can disappear after restart or redeploy. The committed filing dataset remains available because it is part of the repo.
 
-- OpenAI ChatGPT 4.1-mini
-- qwen3:14b local
-- llama3.1 local
+## Cost Guidance
 
-## Render vs Local Behavior
+OpenAI API usage for 3-10 reviewers and a modest number of questions should normally stay low. Set a small spend limit in the OpenAI billing dashboard before sharing the demo.
 
-Render deployment should use OpenAI ChatGPT 4.1-mini. The local model options are still visible in the dropdown, but the UI shows an info message explaining that they require the local version with Ollama.
+Local Ollama mode has no API cost, but it requires a reviewer machine with enough RAM and the Ollama service running.
 
-Local runs can use all three options. The two local models require Ollama running on the same machine.
+## Production Upgrade Notes
 
-Local Ollama setup:
-
-```bash
-ollama pull qwen3:14b
-ollama pull llama3.1
-ollama serve
-```
-
-## Render Notes
-
-The included `render.yaml` defines one service:
-
-- `evidence-alpha` for FastAPI plus the built React frontend
-
-The service uses the included Dockerfile. Docker builds the React frontend with Node, then runs FastAPI with Python and serves the built frontend from the same app.
+For a long-term hosted app, replace local JSON storage with persistent storage such as Postgres, object storage for uploads, and a production retrieval layer with embeddings or hybrid search.

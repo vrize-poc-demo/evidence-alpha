@@ -1,8 +1,10 @@
 # Testing
 
-## Smoke Test
+This project includes backend smoke tests and a frontend production build check.
 
-Run:
+## Backend Smoke Test
+
+Run from the project root:
 
 ```bash
 backend/.venv/bin/python scripts/smoke_test.py
@@ -15,25 +17,18 @@ The smoke test validates:
 - `/models`
 - `/filings`
 - `/processor`
-- sample question answer and page citation
-- unsupported question not-found path
-- multiple-file upload processor
+- copied filing dataset
+- supported model choices
+- sample question answer behavior
+- evidence document and page citation
+- unsupported question not-found behavior
+- multiple-file upload processor flow
 
-## Latest Local Test Result
-
-Status:
+Latest local result:
 
 ```text
 Smoke test passed.
 ```
-
-Validated sample questions:
-
-| Filing | Expected page | Result |
-| --- | ---: | --- |
-| `3M_2022_10K` | 47 | Capital intensity answer returned with evidence |
-| `3M_2018_10K` | 59 | FY2018 capex answer returned as `$1577.00` |
-| `3M_2022_10K` | 26 | Operating margin change answer returned with evidence |
 
 ## Frontend Build Test
 
@@ -50,14 +45,63 @@ Latest local result:
 build completed successfully
 ```
 
-## Notes About LLM Testing
+## Manual Browser Test
 
-The smoke test uses controlled benchmark mode and local fallback mode so it can run without spending OpenAI API calls.
+Use this checklist before a reviewer demo:
 
-For live LLM testing:
+1. Start the app with `./scripts/start_app.sh`.
+2. Open `http://127.0.0.1:5173`.
+3. Confirm Dashboard shows indexed filings and chunks.
+4. Open Service Health and confirm the selected model is healthy.
+5. Change the Answer Model dropdown and verify the health card updates.
+6. Open Upload, select one or many SEC HTML files, and verify progress messages appear.
+7. Open Ask and confirm there is no filing selector and no model selector.
+8. Ask a question and verify the answer includes evidence.
+9. Ask a follow-up in the same chat and verify the answer can use that chat's context.
+10. Create a new chat and verify it does not reuse the previous chat's context.
+11. Open History and confirm chat sessions are saved.
+12. Open Service Health, start the document reset flow, and confirm it requires typing `DELETE`.
 
-1. Set `OPENAI_API_KEY` in `backend/.env`.
-2. Keep `USE_LLM=true`.
-3. Keep `USE_PRACTICE_ANSWER_KEY=false`.
-4. Start the backend and frontend.
-5. Choose `OpenAI ChatGPT 4.1-mini` from the Ask page.
+## Sample Questions
+
+Good smoke/demo question:
+
+```text
+Is 3M a capital-intensive business based on FY2022 data?
+```
+
+Follow-up question in the same chat:
+
+```text
+What page supports that answer?
+```
+
+Local context test that was verified with `qwen3:14b`:
+
+```text
+We are discussing Microsoft 2016 10-K.
+What was revenue in 2016 compared with 2015?
+```
+
+Expected behavior:
+
+- retrieval should target `MICROSOFT_2016_10K`
+- the answer should cite filing evidence
+- the answer should not use another chat's history
+
+## LLM Test Notes
+
+The app uses the selected LLM for inference only. It does not train or fine-tune a model.
+
+OpenAI testing requires a valid `OPENAI_API_KEY` in `backend/.env` or in Render environment variables.
+
+Local model testing requires Ollama running at:
+
+```text
+http://localhost:11434
+```
+
+Supported local models:
+
+- `qwen3:14b`
+- `llama3.1`

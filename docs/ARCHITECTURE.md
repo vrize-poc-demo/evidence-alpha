@@ -1,188 +1,167 @@
-# Evidence Alpha Architecture
+# Architecture
 
-## Goal
+Evidence Alpha is a React + FastAPI retrieval-augmented generation app. It does not train an LLM. It retrieves relevant SEC filing passages first, then asks the selected LLM to answer only from those passages.
 
-Build a trustworthy analyst copilot over SEC filings. The app should answer only when evidence is available and should show the source document, page, and supporting passage.
-
-## System Diagram
+## High-Level System
 
 ```mermaid
 flowchart LR
-    User["Reviewer / analyst"] --> UI["React web app"]
+    Reviewer["Reviewer"] --> UI["React + Vite UI"]
     UI --> API["FastAPI backend"]
-    API --> Parser["SEC HTML parser"]
-    Parser --> Index["Local evidence index"]
-    API --> Search["BM25-style retriever"]
-    Search --> Index
-    Search --> Evidence["Top evidence chunks"]
-    Evidence --> LLM["Selected LLM"]
-    LLM --> API
+    API --> Indexer["SEC HTML parser + chunker"]
+    Indexer --> LocalIndex["Local evidence index<br/>backend/.index/chunks.json"]
+    API --> Retriever["BM25-style retriever"]
+    Retriever --> LocalIndex
+    Retriever --> Evidence["Top evidence chunks"]
+    Evidence --> LLMRouter["LLM router"]
+    LLMRouter --> OpenAI["OpenAI<br/>gpt-4.1-mini"]
+    LLMRouter --> Ollama["Local Ollama<br/>qwen3:14b / llama3.1"]
     API --> UI
-    UI --> History["Browser chat history"]
+    UI --> BrowserStore["Browser localStorage<br/>chat history + model choice"]
 ```
 
-## Upload And Processing Flow
+## Main Components
 
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant UI as React UI
-    participant API as FastAPI
-    participant P as Global Processor
-    participant I as Evidence Index
+| Layer | Technology | Responsibility |
+| --- | --- | --- |
+| Web UI | React, Vite, lucide-react | Dashboard, upload, chat, history, health, model selection |
+| API | FastAPI, Pydantic | Routes, validation, upload handling, service health, answer orchestration |
+| Parser | BeautifulSoup | SEC HTML cleanup and text extraction |
+| Index | JSON file | Local searchable filing chunks and metadata |
+| Retrieval | BM25-style keyword search | Finds relevant evidence across all indexed filings |
+| LLM | OpenAI or Ollama | Generates evidence-grounded answers |
+| Browser storage | localStorage | Saves chat sessions and selected model for the reviewer |
 
-    U->>UI: Upload one or many filings
-    UI->>API: POST /filings/upload-multiple
-    API->>P: Create queued jobs
-    P->>P: Parse SEC HTML
-    P->>I: Add chunks and metadata
-    UI->>API: Poll GET /processor
-    API-->>UI: queued / processing / complete / failed
-    UI->>API: Refresh GET /filings
-```
-
-## Question Answering Flow
-
-```mermaid
-sequenceDiagram
-    participant U as User
-    participant UI as Ask Page
-    participant API as FastAPI
-    participant R as Retriever
-    participant L as LLM
-
-    U->>UI: Ask question
-    UI->>API: POST /ask with model choice
-    API->>R: Search all indexed filings
-    R-->>API: Evidence chunks with pages
-    API->>L: Question plus evidence only
-    L-->>API: JSON answer or not_found
-    API-->>UI: Answer, confidence, document, page, evidence
-```
-
-## Deployment Modes
+## Data Flow
 
 ```mermaid
 flowchart TB
-    subgraph Render["Render version"]
-      RUI["React + FastAPI Docker service"] --> OAI["OpenAI gpt-4.1-mini"]
-    end
-
-    subgraph Local["Local version"]
-      LUI["React + FastAPI on reviewer machine"] --> OAI2["OpenAI gpt-4.1-mini"]
-      LUI --> QWEN["Ollama qwen3:14b"]
-      LUI --> LLAMA["Ollama llama3.1"]
-    end
+    Data["data/filings<br/>committed SEC HTML files"] --> Startup["Backend startup"]
+    Startup --> BuildIndex["Build or load local index"]
+    Upload["Reviewer uploads files"] --> Processor["Global processor jobs"]
+    Processor --> BuildIndex
+    BuildIndex --> Searchable["Searchable chunks"]
+    Searchable --> Ask["Question answering"]
 ```
 
-## Data
-
-The copied dataset lives in `data/`:
-
-- `data/filings/` contains 78 SEC HTML filings.
-- `data/practice-questions.jsonl` contains 136 benchmark-style questions.
-- Each practice question includes the answer and evidence page number.
-
-The filings are HTML, not PDF. That means the first implementation parses SEC HTML directly instead of running OCR or PDF conversion.
-
-## Backend
-
-FastAPI provides the application API.
-
-Main files:
-
-- `backend/app/main.py` exposes API routes.
-- `backend/app/indexer.py` parses filings, builds the local index, searches evidence, and handles practice-question answer lookup.
-- `backend/app/models.py` defines request and response models.
-
-On startup, the backend creates `backend/.index/chunks.json` if it does not already exist.
-
-## Indexing Strategy
-
-1. Read SEC HTML.
-2. Strip script/style content.
-3. Convert HTML into clean text.
-4. Split text into page-like chunks.
-5. Tokenize chunks.
-6. Store chunk text with metadata:
-   - document name
-   - file name
-   - detected page number
-   - token list
-
-This demo uses a lightweight local index so it can run without external infrastructure.
-
-## Retrieval Strategy
-
-The current search uses a BM25-like keyword score:
-
-- tokenize the question
-- search all indexed filings, including files uploaded during the demo
-- score chunks by query-token overlap and inverse document frequency
-- return the top evidence chunks
-
-This is intentionally simple and transparent for the proof-of-solution.
-
-## LLM Answer Strategy
-
-There are two paths:
-
-1. Normal LLM path:
-   - Retrieve top evidence chunks.
-   - Send only those chunks plus the question to the configured LLM.
-   - The LLM must return JSON with answer, confidence, status, evidence id, and calculation.
-   - If the evidence is weak, return `Not found in the indexed filings.`
-
-2. Optional benchmark mode:
-   - If `USE_PRACTICE_ANSWER_KEY=true`, exact practice questions can return the supplied benchmark answer and evidence.
-   - Keep this disabled for real LLM demos.
-
-The default model is `gpt-4.1-mini`, configured with `LLM_MODEL`. The model is used for inference only. The app does not train or fine-tune an LLM.
-
-## Model Selection
-
-The Ask page exposes exactly three model choices:
-
-- OpenAI ChatGPT 4.1-mini
-- qwen3:14b local
-- llama3.1 local
-
-OpenAI uses `OPENAI_API_KEY`. Local models use Ollama through the OpenAI-compatible API at `http://localhost:11434/v1`.
-
-## Frontend
-
-React provides a demo-friendly analyst workspace:
-
-- top navigation
-- dashboard
-- all-filings search scope
-- single and multiple filing upload
-- global processor status
-- sample questions
-- chat interface
-- local browser chat history
-- answer cards
-- evidence drawer
-
-The frontend calls the FastAPI backend at `http://localhost:8000` by default.
+The copied dataset lives in `data/filings`. On first backend startup, the app builds `backend/.index/chunks.json`. Uploaded files are stored under `backend/uploads` and added to the active index.
 
 ## Upload Processing
 
-The backend exposes a global processor:
+```mermaid
+sequenceDiagram
+    participant U as Reviewer
+    participant UI as React UI
+    participant API as FastAPI
+    participant P as Processor
+    participant IDX as Local Index
 
-- `POST /filings/upload-multiple` accepts one or more SEC HTML files.
-- Each file becomes a processing job.
-- Jobs move through `queued`, `processing`, `complete`, or `failed`.
-- `GET /processor` returns recent processing jobs.
-- The frontend polls the processor and displays status across all pages.
+    U->>UI: Select one or many .htm/.html files
+    UI->>API: POST /filings/upload-multiple
+    API->>P: Create one job per file
+    P->>P: Parse and clean SEC HTML
+    P->>P: Split into page-like chunks
+    P->>IDX: Add chunks and metadata
+    UI->>API: Poll GET /processor
+    API-->>UI: Return queued/processing/complete/failed
+```
 
-## Production Upgrade Path
+## Question Answering
 
-For a stronger version:
+```mermaid
+sequenceDiagram
+    participant U as Reviewer
+    participant UI as Ask Page
+    participant API as FastAPI
+    participant R as Retriever
+    participant L as Selected LLM
 
-- preserve SEC table structure more carefully
-- add SQLite FTS5 or OpenSearch keyword retrieval
-- add embeddings with FAISS, Chroma, Pinecone, or Supabase Vector
-- add a reranker
-- add an answer verifier that checks every number against cited evidence
-- add evaluation metrics against the 136 practice questions
+    U->>UI: Ask question in active chat
+    UI->>API: POST /ask with question, model_choice, current chat context
+    API->>API: Clean current-chat context only
+    API->>R: Search all indexed filings
+    R-->>API: Top evidence chunks
+    API->>L: Send question + current-chat context + evidence
+    L-->>API: Return JSON answer with evidence id
+    API-->>UI: Answer, confidence, document, page, evidence
+```
+
+Important behavior:
+
+- The retriever searches all indexed filings.
+- Chat context comes only from the active chat.
+- New chats do not use older chat history.
+- The LLM must cite supplied filing evidence.
+- If evidence is weak, the expected answer is `Not found in the indexed filings.`
+
+## Model Selection
+
+```mermaid
+flowchart LR
+    Health["Service Health page"] --> Choice["Answer Model dropdown"]
+    Choice --> LocalStorage["Saved in browser localStorage"]
+    LocalStorage --> Ask["Ask page uses selected model"]
+    Ask --> Backend["POST /ask model_choice"]
+    Backend --> Router["LLM router"]
+    Router --> GPT["OpenAI gpt-4.1-mini"]
+    Router --> Qwen["Ollama qwen3:14b"]
+    Router --> Llama["Ollama llama3.1"]
+```
+
+The model selector is intentionally not inside the chat page. This keeps each chat focused on the conversation while Service Health controls the operating mode.
+
+## Service Health
+
+Service Health calls:
+
+- `GET /health`
+- `GET /health/services`
+- `GET /models`
+- `GET /local-models/status`
+
+It shows only the selected model's detailed health. For example, if OpenAI is selected, local Ollama details are not shown as the active model health. If a local model is selected, Ollama setup and model download controls are shown.
+
+## Storage Model
+
+| Data | Location | Notes |
+| --- | --- | --- |
+| Original filings | `data/filings` | Committed with the repo |
+| Practice questions | `data/practice-questions.jsonl` | Used for smoke tests and optional benchmark mode |
+| Generated index | `backend/.index/chunks.json` | Rebuilt automatically if missing |
+| Uploaded filings | `backend/uploads` | Local runtime files |
+| Chat history | Browser localStorage | Per browser and per machine |
+| Processor jobs | Backend memory | Runtime-only status |
+
+There is no external database in this proof-of-solution.
+
+## Deployment Architecture
+
+```mermaid
+flowchart TB
+    subgraph Render["Render hosted demo"]
+        Docker["Docker build"] --> ReactBuild["Build React static assets"]
+        ReactBuild --> FastAPI["FastAPI serves API + frontend"]
+        FastAPI --> OpenAI["OpenAI gpt-4.1-mini"]
+    end
+
+    subgraph Local["Local reviewer machine"]
+        LocalReact["Vite frontend"] --> LocalAPI["FastAPI backend"]
+        LocalAPI --> LocalOpenAI["OpenAI gpt-4.1-mini"]
+        LocalAPI --> LocalOllama["Ollama qwen3:14b / llama3.1"]
+    end
+```
+
+Render should use OpenAI. Local reviewers can use OpenAI or Ollama.
+
+## Accuracy Approach
+
+Evidence Alpha uses a conservative RAG pattern:
+
+1. Search all indexed filings.
+2. Select the best evidence chunks.
+3. Include current-chat context only for follow-up interpretation.
+4. Ask the LLM to answer in strict JSON.
+5. Require the answer to cite evidence.
+6. Decline when evidence is insufficient.
+
+The production upgrade path should add table-aware extraction, hybrid search, embeddings, reranking, and a second verifier pass that checks numbers against citations.

@@ -1,159 +1,72 @@
 # Evidence Alpha
 
-Evidence Alpha is a React + FastAPI proof-of-solution app for answering analyst questions over SEC annual and quarterly filings. It is designed for the Analyst Copilot challenge: every answer must include supporting evidence from the filing, and unsupported questions should be declined.
+Evidence Alpha is a proof-of-solution Analyst Copilot app for asking questions over SEC filings. It uses a React web UI, a FastAPI backend, local document indexing, and an LLM answer layer that must cite evidence from the indexed filings.
 
-## Features
+The app is built for a short client or reviewer demo: reviewers can upload one or many filings, ask questions across all indexed filings, see chat history, inspect citations, and check service health from the browser.
 
-- Dashboard page with top navigation
-- Small bottom status bar with backend, index, processor, OpenAI, and local Ollama health
-- Local model setup controls to download Ollama, start Ollama, and pull approved local models
-- Single and multiple SEC filing upload
-- Global processing status for uploaded files
-- Ask page searches all uploaded/indexed filings with model selector and LLM-backed answers
-- Browser chat history across sessions
-- Evidence drawer with document/page citations
-- Local SEC HTML indexing from the copied dataset
+## Published Demo
 
-## Documentation
+- Published app: https://evidence-alpha.onrender.com
+- Health check: https://evidence-alpha.onrender.com/health
+- API docs: https://evidence-alpha.onrender.com/docs
+- Render dashboard: https://dashboard.render.com/web/srv-daam2buk1f9s73as2h5g/events
 
-- [Architecture](docs/ARCHITECTURE.md)
-- [Feature Guide](docs/FEATURES.md)
-- [Requirements From Prompt](docs/REQUIREMENTS.md)
-- [Approach Note](docs/APPROACH.md)
-- [Sample Questions](docs/SAMPLE_QUESTIONS.md)
-- [Testing](docs/TESTING.md)
-- [Demo Script](docs/DEMO_SCRIPT.md)
-- [Deployment](docs/DEPLOYMENT.md)
+Render free services can sleep after inactivity. If the published app is slow on first open, wait 30-60 seconds and refresh.
 
-## Project Structure
+## Main Features
 
-```text
-.
-├── backend/
-│   ├── app/
-│   │   ├── indexer.py
-│   │   ├── main.py
-│   │   └── models.py
-│   └── requirements.txt
-├── data/
-│   ├── filings/
-│   ├── practice-questions.jsonl
-│   └── README.txt
-├── docs/
-├── frontend/
-│   ├── src/
-│   ├── index.html
-│   └── package.json
-└── README.md
+- Dashboard with indexed filing counts, evidence chunk counts, upload activity, chat count, and selected model status.
+- Top navigation for Dashboard, Upload, Ask, History, and Service Health.
+- Single file upload for SEC `.htm` and `.html` filings.
+- Multiple file upload for bulk filing processing.
+- Global processor that shows queued, processing, complete, and failed upload jobs.
+- Ask page with chat-style Q&A over all uploaded and indexed filings.
+- Per-chat memory for follow-up questions. A new chat starts with a clean history and does not use other chats.
+- Browser chat history stored locally for the reviewer.
+- Evidence-backed answers with confidence, source document, page number, and supporting passages.
+- Service Health page with backend, index, processor, selected LLM, and Ollama/local model setup status.
+- Model selection from Service Health only, with exactly three supported choices:
+  - OpenAI ChatGPT 4.1-mini
+  - qwen3:14b local
+  - llama3.1 local
+- Local Ollama controls to open/download Ollama, start Ollama, and pull the selected local model.
+- Confirmed document reset flow. The reviewer must type `DELETE` before all indexed/uploaded documents are cleared.
+- Render-compatible single service where FastAPI serves both the API and the built React app.
+
+## Tech Stack
+
+- Frontend: React, Vite, lucide-react icons, browser localStorage for chat history and model preference.
+- Backend: FastAPI, Uvicorn, Pydantic.
+- Parsing: BeautifulSoup for SEC HTML cleanup and chunking.
+- Retrieval: local BM25-style keyword search over filing chunks.
+- LLMs:
+  - OpenAI `gpt-4.1-mini` for hosted and easiest reviewer mode.
+  - Ollama `qwen3:14b` for local-only mode.
+  - Ollama `llama3.1` for local-only mode.
+- Storage:
+  - Source filings in `data/filings`.
+  - Generated index in `backend/.index/chunks.json`.
+  - Uploaded files in `backend/uploads`.
+  - Chat history in browser localStorage.
+  - No external database is required.
+- Deployment: Docker and Render free web service.
+
+## Quick Start For Reviewers
+
+Clone the repository:
+
+```bash
+git clone git@github.com:vrize-poc-demo/evidence-alpha.git
+cd evidence-alpha
 ```
 
-## Requirements
-
-- Python 3.11+
-- Node.js 20+
-- npm
-- Hosted LLM API key, preferably OpenAI for the easiest reviewer setup
-
-## Easiest Reviewer Setup
-
-For non-technical reviewers, use these scripts.
+Run setup once:
 
 ```bash
 ./scripts/setup.sh
 ```
 
-Then open `backend/.env` and paste the API key:
-
-```text
-OPENAI_API_KEY=your_openai_api_key_here
-```
-
-Start the backend:
-
-```bash
-./scripts/run_backend.sh
-```
-
-Open another terminal and start the frontend:
-
-```bash
-./scripts/run_frontend.sh
-```
-
-Open:
-
-```text
-http://localhost:5173
-```
-
-Or run both backend and frontend with one command:
-
-```bash
-./scripts/start_app.sh
-```
-
-Then open:
-
-```text
-http://127.0.0.1:5173
-```
-
-The backend also runs at:
-
-```text
-http://127.0.0.1:8000
-```
-
-In this project the backend root (`/`) intentionally serves the React app, which is useful for Render's single-service deployment. For backend testing use:
-
-```text
-API helper page: http://127.0.0.1:8000/api
-Swagger docs:    http://127.0.0.1:8000/docs
-OpenAPI JSON:    http://127.0.0.1:8000/openapi.json
-```
-
-## Reviewer Quick Start
-
-After cloning the repo:
-
-```bash
-git clone <your-repo-url>
-cd evidence-alpha
-```
-
-Create the backend environment file:
-
-```bash
-cd backend
-cp .env.example .env
-```
-
-For the easiest setup, create one OpenAI API key and update `backend/.env`:
-
-```text
-LLM_PROVIDER=openai
-OPENAI_API_KEY=your_openai_api_key_here
-LLM_MODEL=gpt-4.1-mini
-USE_LLM=true
-USE_PRACTICE_ANSWER_KEY=false
-```
-
-Then run the backend and frontend using the steps below.
-
-If the reviewer does not provide an API key, the app still starts, loads filings, uploads filings, and retrieves evidence, but LLM answer generation will return a setup message.
-
-## LLM Configuration
-
-This app uses an LLM for answer generation after the backend retrieves evidence from all uploaded/indexed filings. It does not train or fine-tune a model.
-
-Create a backend environment file:
-
-```bash
-cd backend
-cp .env.example .env
-```
-
-Edit `backend/.env` for the recommended low-cost reviewer mode:
+Add the OpenAI API key in `backend/.env`:
 
 ```text
 LLM_PROVIDER=openai
@@ -164,152 +77,122 @@ USE_LLM=true
 USE_PRACTICE_ANSWER_KEY=false
 ```
 
-Supported webpage model choices:
+Start the full app with one command:
 
-- OpenAI ChatGPT 4.1-mini
-- qwen3:14b local
-- llama3.1 local
-
-OpenAI mode:
-
-```text
-LLM_PROVIDER=openai
-OPENAI_API_KEY=your_openai_api_key_here
-LLM_MODEL=gpt-4.1-mini
-USE_LLM=true
+```bash
+./scripts/start_app.sh
 ```
 
-Local Ollama mode:
+Open the local app:
+
+```text
+http://127.0.0.1:5173
+```
+
+Useful backend URLs:
+
+```text
+API helper page: http://127.0.0.1:8000/api
+Swagger docs:    http://127.0.0.1:8000/docs
+Health check:    http://127.0.0.1:8000/health
+```
+
+The backend root `http://127.0.0.1:8000/` intentionally serves the React app. Use `/docs`, `/api`, or `/health` when you want backend pages.
+
+## Local Model Option
+
+Local models are optional. OpenAI ChatGPT 4.1-mini is the default and easiest reviewer mode.
+
+To use a local LLM, install and run Ollama:
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+ollama serve
+```
+
+Then pull one of the supported models:
 
 ```bash
 ollama pull qwen3:14b
 ollama pull llama3.1
-ollama serve
 ```
 
-The webpage dropdown can then use `qwen3:14b local` or `llama3.1 local`. Local models require Ollama running at `http://localhost:11434`.
+In the app, open Service Health and change the Answer Model dropdown to `qwen3:14b local` or `llama3.1 local`.
 
-The web UI Health details can help local reviewers:
-
-- open the Ollama download page if Ollama is not installed
-- start Ollama if the `ollama` command is installed but not running
-- download `qwen3:14b` or `llama3.1`
-- refresh local model status
-
-## Run The Backend
-
-```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
-
-The backend indexes filings from `data/filings` on first startup. This can take a little time because the copied dataset contains 78 large SEC HTML filings.
-
-The generated index is written to `backend/.index/chunks.json`. It is ignored by Git and will be rebuilt automatically on the reviewer's first run.
-
-Health check:
-
-```bash
-curl http://localhost:8000/health
-```
-
-API documentation:
-
-```text
-http://localhost:8000/docs
-```
-
-If `http://localhost:8000/` opens the frontend, that is expected. The backend root serves the React build for Render-style deployment; use `/docs` or `/api` for backend pages.
-
-## Test The Project
-
-Run the smoke test:
-
-```bash
-python3 scripts/smoke_test.py
-```
-
-The smoke test checks:
-
-- health endpoint
-- model dropdown options
-- copied filings index
-- global processor endpoint
-- sample question answer with evidence
-- multiple-file upload processor
-
-## Run The Frontend
-
-Open a second terminal:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Then open:
-
-```text
-http://localhost:5173
-```
+On Render, local model choices are visible for clarity, but they show an information message because Ollama runs only on a local reviewer machine.
 
 ## Demo Flow
 
-1. Start backend and frontend.
-2. Open the dashboard.
-3. Upload one or many SEC `.htm` or `.html` filings.
-4. Watch the global processor.
-5. Open Ask and select the answer model.
-6. Ask an analyst question.
-7. Review the answer, confidence, source document, page number, and evidence.
+1. Open the Dashboard and show filing/chunk counts.
+2. Open Service Health and confirm the selected answer model is healthy.
+3. Open Upload and upload one or many SEC HTML filings.
+4. Watch the global processor finish the upload jobs.
+5. Open Ask and ask a question. The app searches all indexed filings automatically.
+6. Ask a follow-up question in the same chat. The app uses only that chat's history.
+7. Create a new chat and ask a question. The new chat does not inherit prior chat memory.
+8. Open the evidence drawer and show source document, page, and passage.
+9. Open History to show saved chats.
 
-By default, every question retrieves evidence across all indexed filings and sends only that evidence to the configured LLM. If the evidence is weak, the LLM is instructed to return `Not found in the indexed filings.`
+Sample question:
 
-For a controlled benchmark demo, you can set `USE_PRACTICE_ANSWER_KEY=true`. That mode returns exact answer-key responses for questions that match `practice-questions.jsonl`, but it should stay disabled when demonstrating real LLM behavior.
+```text
+Is 3M a capital-intensive business based on FY2022 data?
+```
 
-## Temporary Deployment
+Follow-up example:
 
-See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for a 1-2 week hosted demo path using Render. The included `render.yaml` deploys one web service that serves both the FastAPI API and the built React frontend.
+```text
+What page supports that answer?
+```
 
-## Render vs Local Versions
+## Testing
 
-Render version:
+Run the backend smoke test:
 
-- Use **OpenAI ChatGPT 4.1-mini**.
-- Local model options remain visible, but the UI explains that they only work locally.
+```bash
+backend/.venv/bin/python scripts/smoke_test.py
+```
 
-Local version:
+Run the frontend build:
 
-- Use **OpenAI ChatGPT 4.1-mini**, **qwen3:14b local**, or **llama3.1 local**.
-- Local models require Ollama running on the same machine.
+```bash
+cd frontend
+npm run build
+```
+
+The smoke test checks health endpoints, model options, indexed filings, the processor endpoint, sample answer behavior, and multi-file upload processing.
+
+## Documentation
+
+- [Architecture](docs/ARCHITECTURE.md)
+- [Feature Guide](docs/FEATURES.md)
+- [Reviewer Guide](docs/REVIEWER_GUIDE.md)
+- [API Reference](docs/API_REFERENCE.md)
+- [Deployment](docs/DEPLOYMENT.md)
+- [Testing](docs/TESTING.md)
+- [Demo Script](docs/DEMO_SCRIPT.md)
+- [Sample Questions](docs/SAMPLE_QUESTIONS.md)
+- [Requirements From Prompt](docs/REQUIREMENTS.md)
+- [Approach Note](docs/APPROACH.md)
 
 ## API Endpoints
 
-- `GET /api` - backend helper page with documentation links
-- `GET /health` - service status
-- `GET /health/services` - detailed service health for the web UI status bar
-- `GET /models` - supported model choices
-- `GET /local-models/status` - local Ollama status and local model download jobs
-- `POST /local-models/start` - start Ollama locally when installed
-- `POST /local-models/pull` - download an approved local model with Ollama
-- `GET /filings` - indexed filings
-- `GET /processor` - global upload/indexing processor status
-- `POST /filings/upload` - upload and index a new filing
-- `POST /filings/upload-multiple` - upload and process many filings
-- `POST /ask` - ask a question
+- `GET /api` - backend helper page with documentation links.
+- `GET /health` - basic backend health.
+- `GET /health/services` - detailed service health for the UI.
+- `GET /models` - supported model choices.
+- `GET /local-models/status` - Ollama and local model status.
+- `POST /local-models/start` - start Ollama locally when installed.
+- `POST /local-models/pull` - download an approved local model.
+- `GET /filings` - indexed filing summaries.
+- `GET /processor` - global upload/indexing processor jobs.
+- `POST /filings/upload` - upload one filing.
+- `POST /filings/upload-multiple` - upload multiple filings.
+- `POST /documents/delete-all` - delete indexed/uploaded documents after confirmation.
+- `POST /ask` - ask a question with optional current-chat context.
 
-Example:
+## Notes For Reviewers
 
-```bash
-curl -X POST http://localhost:8000/ask \
-  -H "Content-Type: application/json" \
-  -d '{"doc_name":"3M_2022_10K","question":"Is 3M a capital-intensive business based on FY2022 data?"}'
-```
+This app does not train or fine-tune an LLM. It retrieves relevant evidence from filings, sends that evidence to the selected LLM, and asks the LLM to answer only from the supplied evidence.
 
-## Notes
-
-This is a client demo implementation. The production version should replace the current local keyword ranking with hybrid retrieval, stronger table extraction, embeddings, reranking, and a second LLM verification pass.
+For the most accurate demo path, use OpenAI ChatGPT 4.1-mini. For the lowest running cost on a capable local machine, use Ollama with `qwen3:14b`.
