@@ -14,6 +14,8 @@ Evidence Alpha supports two demo modes:
 
 The service may sleep on the free Render plan. If the first request is slow or times out, wait 30-60 seconds and refresh.
 
+On startup, FastAPI binds to Render's `$PORT` immediately and loads the filing index in the background. During that warm-up window, `/health` is available and Service Health may show the filing index as `working`.
+
 ## Render Architecture
 
 The included `render.yaml` defines one web service named `evidence-alpha`.
@@ -27,6 +29,14 @@ Render uses the included `Dockerfile`:
 5. Serve both the API and the built React frontend from the same backend service.
 
 This keeps the demo simple because reviewers only need one public URL.
+
+The backend start command binds to:
+
+```text
+0.0.0.0:${PORT}
+```
+
+That is required for Render port detection.
 
 ## Render Environment Variables
 

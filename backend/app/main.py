@@ -44,6 +44,8 @@ load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 app = FastAPI(title="Evidence Alpha API", version="0.1.0")
 index = FilingIndex()
 index_lock = threading.Lock()
+index_state_lock = threading.Lock()
+index_state = {"ready": False, "loading": False, "error": ""}
 processor_lock = threading.Lock()
 processor_jobs: dict[str, ProcessingJob] = {}
 local_model_lock = threading.Lock()
@@ -65,17 +67,54 @@ app.add_middleware(
 
 @app.on_event("startup")
 def startup() -> None:
+    start_index_load()
+
+
+def set_index_state(**updates: object) -> None:
+    with index_state_lock:
+        index_state.update(updates)
+
+
+def get_index_state() -> dict[str, object]:
+    with index_state_lock:
+        return dict(index_state)
+
+
+def load_index_background() -> None:
+    set_index_state(loading=True, error="")
+    try:
+        with index_lock:
+            index.ensure_index()
+        set_index_state(ready=True, loading=False, error="")
+    except Exception as exc:  # pragma: no cover - defensive startup guard
+        set_index_state(ready=False, loading=False, error=str(exc))
+
+
+def start_index_load() -> None:
+    state = get_index_state()
+    if state["ready"] or state["loading"]:
+        return
+    thread = threading.Thread(target=load_index_background, daemon=True)
+    thread.start()
+
+
+def ensure_index_ready() -> None:
+    start_index_load()
     with index_lock:
         index.ensure_index()
+    set_index_state(ready=True, loading=False, error="")
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
+    state = get_index_state()
     return {
         "status": "ok",
         "llm_enabled": str(llm_enabled()).lower(),
         "provider": provider_name(),
         "model": model_name(),
+        "index_ready": str(state["ready"]).lower(),
+        "index_loading": str(state["loading"]).lower(),
     }
 
 
@@ -234,30 +273,63 @@ def pull_ollama_model(payload: LocalModelActionRequest, background_tasks: Backgr
 
 @app.get("/health/services", response_model=ServiceHealthResponse)
 def service_health(model_choice: str | None = None) -> ServiceHealthResponse:
-    with index_lock:
-        index.ensure_index()
-        filing_count = len(index.filings())
-        chunk_count = len(index.chunks)
+    state = get_index_state()
+    if state["ready"]:
+        with index_lock:
+            filing_count = len(index.filings())
+            chunk_count = len(index.chunks)
+        index_status = "ok" if filing_count else "warning"
+        index_message = f"{filing_count} filing(s), {chunk_count} evidence chunk(s)"
+        index_detail = "Loaded from data/filings and uploaded files"
+    elif state["loading"]:
+        filing_count = 0
+        chunk_count = 0
+        index_status = "working"
+        index_message = "Index is warming up"
+        index_detail = "The API is online while SEC filings load in the background"
+    else:
+        filing_count = 0
+        chunk_count = 0
+        index_status = "error" if state["error"] else "warning"
+        index_message = str(state["error"] or "Index has not started")
+        index_detail = "Refresh or restart the backend"
+
+    if not state["ready"] and not state["loading"]:
+        start_index_load()
+
     with processor_lock:
         jobs = list(processor_jobs.values())
 
-    active_jobs = [job for job in jobs if job.status in {"queued", "processing"}]
-    failed_jobs = [job for job in jobs if job.status == "failed"]
+    if state["ready"]:
+        with index_lock:
+            filing_count = len(index.filings())
+            chunk_count = len(index.chunks)
+        index_status = "ok" if filing_count else "warning"
+        index_message = f"{filing_count} filing(s), {chunk_count} evidence chunk(s)"
+        index_detail = "Loaded from data/filings and uploaded files"
+
     services = [
         service_item("FastAPI backend", "ok", "Running", "http://127.0.0.1:8000"),
         service_item(
             "Filing index",
-            "ok" if filing_count else "warning",
-            f"{filing_count} filing(s), {chunk_count} evidence chunk(s)",
-            "Loaded from data/filings and uploaded files",
+            index_status,
+            index_message,
+            index_detail,
         ),
+    ]
+
+    active_jobs = [job for job in jobs if job.status in {"queued", "processing"}]
+    failed_jobs = [job for job in jobs if job.status == "failed"]
+    services.extend(
+        [
         service_item(
             "Global processor",
             "working" if active_jobs else ("error" if failed_jobs else "ok"),
             f"{len(active_jobs)} active, {len(failed_jobs)} failed, {len(jobs)} recent job(s)",
             "Polls upload indexing jobs",
         ),
-    ]
+        ]
+    )
 
     services.append(selected_model_health(model_choice))
 
@@ -358,9 +430,9 @@ def process_uploaded_file(job_id: str, source: str, file_name: str) -> None:
 
 @app.get("/filings", response_model=list[FilingSummary])
 def filings() -> list[dict]:
+    ensure_index_ready()
     with index_lock:
-        index.ensure_index()
-    return index.filings()
+        return index.filings()
 
 
 @app.post("/filings/upload", response_model=UploadResponse)
@@ -442,8 +514,7 @@ def delete_all_documents(payload: DeleteDocumentsRequest) -> DeleteDocumentsResp
 
 @app.post("/ask", response_model=AskResponse)
 def ask(payload: AskRequest) -> AskResponse:
-    with index_lock:
-        index.ensure_index()
+    ensure_index_ready()
     question = payload.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Question is required")
