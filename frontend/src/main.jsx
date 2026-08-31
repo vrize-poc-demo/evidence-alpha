@@ -10,8 +10,10 @@ import {
   LayoutDashboard,
   MessageSquare,
   Plus,
+  RefreshCw,
   Search,
   ShieldCheck,
+  Signal,
   UploadCloud,
 } from "lucide-react";
 import "./styles.css";
@@ -26,6 +28,8 @@ function App() {
   const [filings, setFilings] = useState([]);
   const [processorJobs, setProcessorJobs] = useState([]);
   const [health, setHealth] = useState(null);
+  const [serviceHealth, setServiceHealth] = useState(null);
+  const [healthLoading, setHealthLoading] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState("");
   const [selectedModel, setSelectedModel] = useState("openai-gpt-4.1-mini");
   const [appError, setAppError] = useState("");
@@ -35,10 +39,15 @@ function App() {
 
   useEffect(() => {
     fetchHealth();
+    fetchServiceHealth();
     fetchFilings();
     fetchProcessor();
-    const timer = window.setInterval(fetchProcessor, 3000);
-    return () => window.clearInterval(timer);
+    const processorTimer = window.setInterval(fetchProcessor, 3000);
+    const healthTimer = window.setInterval(fetchServiceHealth, 10000);
+    return () => {
+      window.clearInterval(processorTimer);
+      window.clearInterval(healthTimer);
+    };
   }, []);
 
   useEffect(() => {
@@ -55,6 +64,29 @@ function App() {
       setAppError("");
     } catch (error) {
       setAppError(error.message);
+    }
+  }
+
+  async function fetchServiceHealth() {
+    setHealthLoading(true);
+    try {
+      setServiceHealth(await apiJson("/health/services"));
+      setAppError("");
+    } catch (error) {
+      setServiceHealth({
+        status: "error",
+        services: [
+          {
+            name: "FastAPI backend",
+            status: "error",
+            message: error.message,
+            detail: "Check that the backend is running on port 8000",
+          },
+        ],
+      });
+      setAppError(error.message);
+    } finally {
+      setHealthLoading(false);
     }
   }
 
@@ -155,6 +187,9 @@ function App() {
         <Dashboard
           filings={filings}
           health={health}
+          serviceHealth={serviceHealth}
+          fetchServiceHealth={fetchServiceHealth}
+          healthLoading={healthLoading}
           selectedModel={selectedModel}
           sessions={sessions}
           activeJobs={activeJobs}
@@ -188,6 +223,15 @@ function App() {
       )}
 
       {page === "history" && <HistoryPage sessions={sessions} openSession={openSession} startNewChat={startNewChat} />}
+      {page === "health" && (
+        <HealthPage
+          serviceHealth={serviceHealth}
+          fetchServiceHealth={fetchServiceHealth}
+          healthLoading={healthLoading}
+          selectedModel={selectedModel}
+        />
+      )}
+      <HealthBar serviceHealth={serviceHealth} healthLoading={healthLoading} setPage={setPage} />
     </main>
   );
 }
@@ -244,7 +288,19 @@ function GlobalProcessor({ jobs, activeJobs }) {
   );
 }
 
-function Dashboard({ filings, health, selectedModel, sessions, activeJobs, completedJobs, failedJobs, setPage }) {
+function Dashboard({
+  filings,
+  health,
+  serviceHealth,
+  fetchServiceHealth,
+  healthLoading,
+  selectedModel,
+  sessions,
+  activeJobs,
+  completedJobs,
+  failedJobs,
+  setPage,
+}) {
   const totalChunks = filings.reduce((sum, filing) => sum + filing.chunk_count, 0);
   return (
     <section className="page dashboard">
@@ -262,6 +318,7 @@ function Dashboard({ filings, health, selectedModel, sessions, activeJobs, compl
       </div>
 
       <div className="dashboardGrid">
+        <HealthSummary serviceHealth={serviceHealth} fetchServiceHealth={fetchServiceHealth} healthLoading={healthLoading} setPage={setPage} />
         <section className="workspacePanel">
           <h3>Model Status</h3>
           <dl className="detailList">
@@ -290,6 +347,88 @@ function Dashboard({ filings, health, selectedModel, sessions, activeJobs, compl
       </div>
     </section>
   );
+}
+
+function HealthPage({ serviceHealth, fetchServiceHealth, healthLoading, selectedModel }) {
+  return (
+    <section className="page">
+      <div className="pageIntro splitIntro">
+        <div>
+          <p className="eyebrow">Health</p>
+          <h2>Service health check</h2>
+          <p>Check backend, index, upload processor, OpenAI configuration, and local Ollama availability.</p>
+        </div>
+        <button className="primaryAction" onClick={fetchServiceHealth} disabled={healthLoading}>
+          <RefreshCw size={18} />
+          {healthLoading ? "Checking..." : "Refresh"}
+        </button>
+      </div>
+      <HealthSummary serviceHealth={serviceHealth} fetchServiceHealth={fetchServiceHealth} healthLoading={healthLoading} selectedModel={selectedModel} expanded />
+    </section>
+  );
+}
+
+function HealthSummary({ serviceHealth, fetchServiceHealth, healthLoading, setPage, selectedModel, expanded = false }) {
+  const services = serviceHealth?.services || [];
+  const overall = serviceHealth?.status || "checking";
+  return (
+    <section className={`workspacePanel healthPanel ${expanded ? "wide" : ""}`}>
+      <div className="panelTitle">
+        <h3>Service Health</h3>
+        <span className={`healthPill ${overall}`}>{healthLabel(overall)}</span>
+      </div>
+      {selectedModel?.startsWith("local-") && (
+        <p className="healthHint">Local model selected: Ollama must be running on this machine.</p>
+      )}
+      <div className="serviceList">
+        {services.length === 0 && <p className="muted">Checking services...</p>}
+        {services.map((service) => (
+          <article className="serviceItem" key={service.name}>
+            <span className={`serviceDot ${service.status}`} />
+            <div>
+              <strong>{service.name}</strong>
+              <p>{service.message}</p>
+              {expanded && service.detail && <small>{service.detail}</small>}
+            </div>
+          </article>
+        ))}
+      </div>
+      <div className="healthActions">
+        <button className="secondaryAction" onClick={fetchServiceHealth} disabled={healthLoading}>
+          <RefreshCw size={18} />
+          {healthLoading ? "Checking..." : "Refresh"}
+        </button>
+        {setPage && (
+          <button className="secondaryAction" onClick={() => setPage("health")}>
+            <Signal size={18} />
+            Details
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function HealthBar({ serviceHealth, healthLoading, setPage }) {
+  const services = serviceHealth?.services || [];
+  const overall = serviceHealth?.status || "checking";
+  const label = healthLoading ? "Checking services..." : `${healthLabel(overall)} · ${services.length || 0} checks`;
+  return (
+    <footer className={`healthBar ${overall}`}>
+      <button onClick={() => setPage("health")}>
+        <Signal size={17} />
+        <span>{label}</span>
+      </button>
+    </footer>
+  );
+}
+
+function healthLabel(status) {
+  if (status === "ok") return "Healthy";
+  if (status === "working") return "Working";
+  if (status === "warning") return "Needs attention";
+  if (status === "error") return "Service issue";
+  return "Checking";
 }
 
 function Metric({ icon: Icon, label, value }) {

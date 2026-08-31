@@ -3,6 +3,8 @@ from __future__ import annotations
 import tempfile
 import os
 import threading
+import urllib.error
+import urllib.request
 import uuid
 from pathlib import Path
 
@@ -15,7 +17,17 @@ from dotenv import load_dotenv
 from .indexer import FilingIndex, answer_from_evidence, concise_evidence
 from .indexer import ROOT
 from .llm import MODEL_CHOICES, answer_with_llm, llm_enabled, model_name, provider_name
-from .models import AskRequest, AskResponse, Evidence, FilingSummary, MultiUploadResponse, ProcessingJob, UploadResponse
+from .models import (
+    AskRequest,
+    AskResponse,
+    Evidence,
+    FilingSummary,
+    MultiUploadResponse,
+    ProcessingJob,
+    ServiceHealthItem,
+    ServiceHealthResponse,
+    UploadResponse,
+)
 
 
 load_dotenv(Path(__file__).resolve().parents[1] / ".env")
@@ -49,6 +61,68 @@ def health() -> dict[str, str]:
         "provider": provider_name(),
         "model": model_name(),
     }
+
+
+def service_item(name: str, status: str, message: str, detail: str | None = None) -> ServiceHealthItem:
+    return ServiceHealthItem(name=name, status=status, message=message, detail=detail)
+
+
+def ollama_health() -> ServiceHealthItem:
+    base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1").rstrip("/")
+    root_url = base_url[:-3] if base_url.endswith("/v1") else base_url
+    try:
+        with urllib.request.urlopen(f"{root_url}/api/tags", timeout=1.5) as response:
+            if response.status == 200:
+                return service_item("Local Ollama", "ok", "Reachable on this machine", root_url)
+    except (urllib.error.URLError, TimeoutError, OSError):
+        return service_item("Local Ollama", "warning", "Not reachable. Local models need Ollama running.", root_url)
+    return service_item("Local Ollama", "warning", "Responded with an unexpected status", root_url)
+
+
+@app.get("/health/services", response_model=ServiceHealthResponse)
+def service_health() -> ServiceHealthResponse:
+    with index_lock:
+        index.ensure_index()
+        filing_count = len(index.filings())
+        chunk_count = len(index.chunks)
+    with processor_lock:
+        jobs = list(processor_jobs.values())
+
+    active_jobs = [job for job in jobs if job.status in {"queued", "processing"}]
+    failed_jobs = [job for job in jobs if job.status == "failed"]
+    services = [
+        service_item("FastAPI backend", "ok", "Running", "http://127.0.0.1:8000"),
+        service_item(
+            "Filing index",
+            "ok" if filing_count else "warning",
+            f"{filing_count} filing(s), {chunk_count} evidence chunk(s)",
+            "Loaded from data/filings and uploaded files",
+        ),
+        service_item(
+            "Global processor",
+            "working" if active_jobs else ("error" if failed_jobs else "ok"),
+            f"{len(active_jobs)} active, {len(failed_jobs)} failed, {len(jobs)} recent job(s)",
+            "Polls upload indexing jobs",
+        ),
+    ]
+
+    if llm_enabled():
+        if os.getenv("OPENAI_API_KEY"):
+            services.append(service_item("OpenAI ChatGPT 4.1-mini", "ok", "API key configured", "gpt-4.1-mini"))
+        else:
+            services.append(service_item("OpenAI ChatGPT 4.1-mini", "warning", "OPENAI_API_KEY is not set", "gpt-4.1-mini"))
+    else:
+        services.append(service_item("LLM generation", "warning", "USE_LLM is disabled", "Evidence retrieval still works"))
+
+    services.append(ollama_health())
+
+    if any(item.status == "error" for item in services):
+        overall = "error"
+    elif any(item.status in {"warning", "working"} for item in services):
+        overall = "warning"
+    else:
+        overall = "ok"
+    return ServiceHealthResponse(status=overall, services=services)
 
 
 @app.get("/api", response_class=HTMLResponse)

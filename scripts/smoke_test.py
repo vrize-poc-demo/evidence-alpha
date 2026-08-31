@@ -56,6 +56,12 @@ def main() -> None:
     health = client.get("/health")
     assert_ok(health.status_code == 200, "/health should return 200")
 
+    service_health = client.get("/health/services").json()
+    service_names = {item["name"] for item in service_health["services"]}
+    assert_ok("FastAPI backend" in service_names, "/health/services should include backend status")
+    assert_ok("Filing index" in service_names, "/health/services should include filing index status")
+    assert_ok("Global processor" in service_names, "/health/services should include processor status")
+
     models = client.get("/models").json()
     assert_ok(len(models) == 3, "/models should expose exactly 3 choices")
     assert_ok(models[0]["id"] == "openai-gpt-4.1-mini", "OpenAI model should be first")

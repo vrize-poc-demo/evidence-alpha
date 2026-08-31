@@ -25,6 +25,7 @@ button {
 .appShell {
   min-height: 100vh;
   background: #f5f7f2;
+  padding-bottom: 42px;
 }
 
 .topNav {
@@ -270,6 +271,143 @@ button {
 .workspacePanel h3 {
   margin: 0 0 14px;
   font-size: 18px;
+}
+
+.panelTitle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.panelTitle h3 {
+  margin: 0;
+}
+
+.healthPanel {
+  grid-column: 1 / -1;
+}
+
+.healthPill {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.healthPill.ok,
+.healthBar.ok {
+  background: #dff5e9;
+  color: #19523f;
+}
+
+.healthPill.warning,
+.healthPill.working,
+.healthBar.warning,
+.healthBar.working {
+  background: #fff0bd;
+  color: #5c4610;
+}
+
+.healthPill.error,
+.healthBar.error {
+  background: #ffe0dc;
+  color: #8b2b23;
+}
+
+.healthPill.checking,
+.healthBar.checking {
+  background: #e8eef3;
+  color: #334453;
+}
+
+.healthHint {
+  margin: 0 0 12px;
+  color: #5c4610;
+  font-weight: 800;
+}
+
+.serviceList {
+  display: grid;
+  gap: 10px;
+}
+
+.serviceItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px 0;
+  border-top: 1px solid #edf2ee;
+}
+
+.serviceItem strong {
+  display: block;
+}
+
+.serviceItem p {
+  margin: 2px 0 0;
+  color: #607169;
+  line-height: 1.4;
+}
+
+.serviceItem small {
+  display: block;
+  margin-top: 4px;
+  color: #76857d;
+}
+
+.serviceDot {
+  width: 11px;
+  height: 11px;
+  border-radius: 999px;
+  margin-top: 6px;
+}
+
+.serviceDot.ok {
+  background: #238a65;
+}
+
+.serviceDot.warning,
+.serviceDot.working {
+  background: #c8911d;
+}
+
+.serviceDot.error {
+  background: #c64036;
+}
+
+.healthActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.healthBar {
+  position: fixed;
+  right: 18px;
+  bottom: 14px;
+  z-index: 10;
+  border: 1px solid rgba(23, 59, 50, 0.15);
+  border-radius: 999px;
+  box-shadow: 0 8px 22px rgba(23, 59, 50, 0.14);
+}
+
+.healthBar button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  padding: 0 12px;
 }
 
 .detailList {
@@ -746,5 +884,17 @@ summary {
 
   .historyItem time {
     grid-column: 2;
+  }
+
+  .healthBar {
+    right: 12px;
+    bottom: 10px;
+    max-width: calc(100% - 24px);
+  }
+
+  .healthBar span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

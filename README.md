@@ -5,6 +5,7 @@ Evidence Alpha is a React + FastAPI proof-of-solution app for answering analyst 
 ## Features
 
 - Dashboard page with top navigation
+- Small bottom status bar with backend, index, processor, OpenAI, and local Ollama health
 - Single and multiple SEC filing upload
 - Global processing status for uploaded files
 - Ask page with filing selector, model selector, and LLM-backed answers
@@ -282,6 +283,7 @@ Local version:
 
 - `GET /api` - backend helper page with documentation links
 - `GET /health` - service status
+- `GET /health/services` - detailed service health for the web UI status bar
 - `GET /models` - supported model choices
 - `GET /filings` - indexed filings
 - `GET /processor` - global upload/indexing processor status

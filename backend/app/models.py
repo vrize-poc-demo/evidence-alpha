@@ -53,3 +53,15 @@ class ProcessingJob(BaseModel):
 class MultiUploadResponse(BaseModel):
     status: str
     jobs: list[ProcessingJob]
+
+
+class ServiceHealthItem(BaseModel):
+    name: str
+    status: str
+    message: str
+    detail: str | None = None
+
+
+class ServiceHealthResponse(BaseModel):
+    status: str
+    services: list[ServiceHealthItem]
