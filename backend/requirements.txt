@@ -1,0 +1,7 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+python-multipart==0.0.19
+beautifulsoup4==4.12.3
+pydantic==2.10.4
+openai==1.59.7
+python-dotenv==1.0.1
