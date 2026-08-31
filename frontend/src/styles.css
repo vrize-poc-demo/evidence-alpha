@@ -112,6 +112,18 @@ button {
   background: #ffffff;
 }
 
+.appError {
+  width: min(1180px, calc(100% - 36px));
+  margin: 18px auto 0;
+  background: #ffe0dc;
+  border: 1px solid #efaaa2;
+  border-radius: 8px;
+  color: #8b2b23;
+  font-weight: 900;
+  line-height: 1.4;
+  padding: 12px 16px;
+}
+
 .processor.busy {
   border-color: #cfb36b;
   background: #fff8e5;

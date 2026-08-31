@@ -16,9 +16,10 @@ import {
 } from "lucide-react";
 import "./styles.css";
 
-const API = import.meta.env.VITE_API_URL || (window.location.port === "5173" ? "http://localhost:8000" : "");
+const LOCAL_HOSTS = ["localhost", "127.0.0.1", ""];
+const API = import.meta.env.VITE_API_URL || (LOCAL_HOSTS.includes(window.location.hostname) ? "http://localhost:8000" : "");
 const HISTORY_KEY = "evidence-alpha-chat-history";
-const IS_LOCAL_APP = ["localhost", "127.0.0.1", ""].includes(window.location.hostname);
+const IS_LOCAL_APP = LOCAL_HOSTS.includes(window.location.hostname);
 
 function App() {
   const [page, setPage] = useState("dashboard");
@@ -27,6 +28,7 @@ function App() {
   const [health, setHealth] = useState(null);
   const [selectedDoc, setSelectedDoc] = useState("");
   const [selectedModel, setSelectedModel] = useState("openai-gpt-4.1-mini");
+  const [appError, setAppError] = useState("");
   const [sessions, setSessions] = useState(loadSessions);
   const [activeSessionId, setActiveSessionId] = useState(() => sessions[0]?.id || createSessionId());
   const completedJobCount = useRef(0);
@@ -48,19 +50,30 @@ function App() {
   }, [filings, selectedDoc]);
 
   async function fetchHealth() {
-    const response = await fetch(`${API}/health`);
-    setHealth(await response.json());
+    try {
+      setHealth(await apiJson("/health"));
+      setAppError("");
+    } catch (error) {
+      setAppError(error.message);
+    }
   }
 
   async function fetchFilings() {
-    const response = await fetch(`${API}/filings`);
-    setFilings(await response.json());
+    try {
+      setFilings(await apiJson("/filings"));
+      setAppError("");
+    } catch (error) {
+      setAppError(error.message);
+    }
   }
 
   async function fetchProcessor() {
-    const response = await fetch(`${API}/processor`);
-    if (!response.ok) return;
-    const jobs = await response.json();
+    let jobs = [];
+    try {
+      jobs = await apiJson("/processor");
+    } catch {
+      return;
+    }
     const completeCount = jobs.filter((job) => job.status === "complete").length;
     if (completeCount > completedJobCount.current) {
       completedJobCount.current = completeCount;
@@ -104,12 +117,21 @@ function App() {
       messages: [...session.messages, { role: "user", text: clean }],
     }));
 
-    const response = await fetch(`${API}/ask`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: clean, doc_name: selectedDoc, model_choice: selectedModel }),
-    });
-    const data = await response.json();
+    let data;
+    try {
+      data = await apiJson("/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: clean, doc_name: selectedDoc, model_choice: selectedModel }),
+      });
+    } catch (error) {
+      data = {
+        status: "not_found",
+        answer: error.message,
+        confidence: 0,
+        evidence: [],
+      };
+    }
 
     upsertActiveSession((session) => ({
       ...session,
@@ -126,6 +148,7 @@ function App() {
   return (
     <main className="appShell">
       <TopNav page={page} setPage={setPage} startNewChat={startNewChat} />
+      {appError && <div className="appError">{appError}</div>}
       <GlobalProcessor jobs={processorJobs} activeJobs={activeJobs} />
 
       {page === "dashboard" && (
@@ -293,11 +316,7 @@ function UploadPage({ fetchFilings, fetchProcessor, processorJobs, setProcessorJ
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
     try {
-      const response = await fetch(`${API}/filings/upload-multiple`, { method: "POST", body: formData });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail || "Upload failed");
-      }
+      const data = await apiJson("/filings/upload-multiple", { method: "POST", body: formData });
       setUploadedJobIds(data.jobs.map((job) => job.job_id));
       setProcessorJobs((jobs) => mergeJobs(data.jobs, jobs));
       setUploadMessage(`${data.jobs.length} file(s) uploaded and queued for processing.`);
@@ -573,6 +592,27 @@ function mergeJobs(incoming, existing) {
   const byId = new Map(existing.map((job) => [job.job_id, job]));
   incoming.forEach((job) => byId.set(job.job_id, job));
   return Array.from(byId.values());
+}
+
+async function apiJson(path, options) {
+  const response = await fetch(`${API}${path}`, options);
+  const text = await response.text();
+  let data = null;
+
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error(`${path} returned a non-JSON response. Check that the backend is running on port 8000.`);
+    }
+  }
+
+  if (!response.ok) {
+    const detail = data?.detail || data?.message || text || response.statusText;
+    throw new Error(`${path} failed: ${detail}`);
+  }
+
+  return data;
 }
 
 createRoot(document.getElementById("root")).render(<App />);
