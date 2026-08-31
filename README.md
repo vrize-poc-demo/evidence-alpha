@@ -166,6 +166,7 @@ The smoke test checks health endpoints, model options, indexed filings, the proc
 
 - [Architecture](docs/ARCHITECTURE.md)
 - [Feature Guide](docs/FEATURES.md)
+- [Model Guide](docs/MODEL_GUIDE.md)
 - [Reviewer Guide](docs/REVIEWER_GUIDE.md)
 - [API Reference](docs/API_REFERENCE.md)
 - [Deployment](docs/DEPLOYMENT.md)

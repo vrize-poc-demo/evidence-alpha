@@ -155,6 +155,8 @@ Default:
 
 The selected model is stored in browser localStorage so the reviewer does not need to choose it repeatedly.
 
+For model-by-model reasoning, pros, cons, and setup details, see `docs/MODEL_GUIDE.md`.
+
 ## OpenAI Mode
 
 OpenAI mode uses:
