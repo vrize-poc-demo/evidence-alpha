@@ -141,7 +141,15 @@ function App() {
         />
       )}
 
-      {page === "upload" && <UploadPage fetchFilings={fetchFilings} fetchProcessor={fetchProcessor} setPage={setPage} />}
+      {page === "upload" && (
+        <UploadPage
+          fetchFilings={fetchFilings}
+          fetchProcessor={fetchProcessor}
+          processorJobs={processorJobs}
+          setProcessorJobs={setProcessorJobs}
+          setPage={setPage}
+        />
+      )}
 
       {page === "chat" && (
         <ChatPage
@@ -271,26 +279,39 @@ function Metric({ icon: Icon, label, value }) {
   );
 }
 
-function UploadPage({ fetchFilings, fetchProcessor, setPage }) {
+function UploadPage({ fetchFilings, fetchProcessor, processorJobs, setProcessorJobs, setPage }) {
   const [files, setFiles] = useState([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState("");
+  const [uploadedJobIds, setUploadedJobIds] = useState([]);
 
   async function submitUpload(event) {
     event.preventDefault();
     if (!files.length) return;
     setUploading(true);
+    setUploadMessage(`Uploading ${files.length} file(s) to the processor...`);
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
     try {
-      await fetch(`${API}/filings/upload-multiple`, { method: "POST", body: formData });
+      const response = await fetch(`${API}/filings/upload-multiple`, { method: "POST", body: formData });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || "Upload failed");
+      }
+      setUploadedJobIds(data.jobs.map((job) => job.job_id));
+      setProcessorJobs((jobs) => mergeJobs(data.jobs, jobs));
+      setUploadMessage(`${data.jobs.length} file(s) uploaded and queued for processing.`);
       await fetchProcessor();
       await fetchFilings();
       setFiles([]);
-      setPage("dashboard");
+    } catch (error) {
+      setUploadMessage(error.message || "Upload failed. Please try again.");
     } finally {
       setUploading(false);
     }
   }
+
+  const visibleJobs = processorJobs.filter((job) => uploadedJobIds.includes(job.job_id));
 
   return (
     <section className="page">
@@ -315,6 +336,24 @@ function UploadPage({ fetchFilings, fetchProcessor, setPage }) {
           <UploadCloud size={18} />
           {uploading ? "Sending to processor..." : "Upload and process"}
         </button>
+        {uploadMessage && <div className="uploadMessage">{uploadMessage}</div>}
+        {visibleJobs.length > 0 && (
+          <div className="uploadJobs">
+            {visibleJobs.map((job) => (
+              <div className="uploadJob" key={job.job_id}>
+                <span className={job.status}>{job.status}</span>
+                <strong>{job.file_name}</strong>
+                <small>{job.message}{job.chunk_count ? ` · ${job.chunk_count} chunks` : ""}</small>
+              </div>
+            ))}
+          </div>
+        )}
+        {visibleJobs.some((job) => job.status === "complete") && (
+          <button type="button" className="secondaryAction" onClick={() => setPage("chat")}>
+            <MessageSquare size={18} />
+            Ask questions
+          </button>
+        )}
       </form>
     </section>
   );
@@ -528,6 +567,12 @@ function modelLabel(modelId) {
   if (modelId === "local-qwen3-14b") return "qwen3:14b local";
   if (modelId === "local-llama3.1") return "llama3.1 local";
   return "OpenAI ChatGPT 4.1-mini";
+}
+
+function mergeJobs(incoming, existing) {
+  const byId = new Map(existing.map((job) => [job.job_id, job]));
+  incoming.forEach((job) => byId.set(job.job_id, job));
+  return Array.from(byId.values());
 }
 
 createRoot(document.getElementById("root")).render(<App />);

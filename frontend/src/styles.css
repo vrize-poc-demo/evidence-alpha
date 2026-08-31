@@ -366,6 +366,67 @@ button {
   font-weight: 800;
 }
 
+.uploadMessage {
+  background: #edf7f2;
+  border: 1px solid #bddfcf;
+  border-radius: 8px;
+  color: #1e5945;
+  font-weight: 900;
+  line-height: 1.4;
+  padding: 12px 14px;
+}
+
+.uploadJobs {
+  display: grid;
+  gap: 10px;
+}
+
+.uploadJob {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 10px;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #dfe8e2;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.uploadJob span {
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 5px 8px;
+  text-transform: uppercase;
+}
+
+.uploadJob span.queued,
+.uploadJob span.processing {
+  background: #fff0bd;
+  color: #5c4610;
+}
+
+.uploadJob span.complete {
+  background: #dff5e9;
+  color: #19523f;
+}
+
+.uploadJob span.failed {
+  background: #ffe0dc;
+  color: #8b2b23;
+}
+
+.uploadJob strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.uploadJob small {
+  grid-column: 2;
+  color: #607169;
+}
+
 .chatLayout {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
