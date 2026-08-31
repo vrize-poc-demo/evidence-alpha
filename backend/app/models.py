@@ -18,10 +18,16 @@ class Evidence(BaseModel):
     score: float
 
 
+class ChatContextMessage(BaseModel):
+    role: str
+    text: str
+
+
 class AskRequest(BaseModel):
     question: str
     doc_name: str | None = None
     model_choice: str | None = None
+    chat_context: list[ChatContextMessage] = []
 
 
 class AskResponse(BaseModel):

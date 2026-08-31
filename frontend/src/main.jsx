@@ -209,6 +209,8 @@ function App() {
   async function askQuestion(question) {
     const clean = question.trim();
     if (!clean) return;
+    const currentSession = sessions.find((session) => session.id === activeSessionId) || newSession(activeSessionId);
+    const chatContext = buildChatContext(currentSession);
 
     upsertActiveSession((session) => ({
       ...session,
@@ -223,7 +225,12 @@ function App() {
       data = await apiJson("/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: clean, doc_name: null, model_choice: selectedModel }),
+        body: JSON.stringify({
+          question: clean,
+          doc_name: null,
+          model_choice: selectedModel,
+          chat_context: chatContext,
+        }),
       });
     } catch (error) {
       data = {
@@ -849,6 +856,11 @@ function ChatPage({ filings, selectedModel, session, askQuestion, startNewChat }
             <strong>{modelLabel(selectedModel)}</strong>
             <small>Change model and setup status from Service Health.</small>
           </div>
+          <div className="scopeBox">
+            <span>Memory</span>
+            <strong>This chat only</strong>
+            <small>Follow-up questions can use this chat history. Other chats stay separate.</small>
+          </div>
           <div className="sampleList">
             <strong>Sample questions</strong>
             {samples.map((sample) => (
@@ -877,7 +889,7 @@ function ChatPage({ filings, selectedModel, session, askQuestion, startNewChat }
               <div className="empty">
                 <MessageSquare size={38} />
                 <h3>Ask a filing question</h3>
-                <p>Answers cite document evidence and stay in this chat history.</p>
+                <p>Answers cite document evidence and can use this chat's prior turns for follow-ups.</p>
               </div>
             )}
             {session.messages.map((message, index) =>
@@ -989,6 +1001,21 @@ function loadSessions() {
 function loadModelChoice() {
   const stored = window.localStorage.getItem(MODEL_KEY);
   return MODEL_OPTIONS.some((item) => item.id === stored) ? stored : "openai-gpt-4.1-mini";
+}
+
+function buildChatContext(session) {
+  return session.messages.slice(-8).map((message) => {
+    if (message.role === "assistant") {
+      return {
+        role: "assistant",
+        text: [
+          message.data?.answer,
+          message.data?.document ? `Source: ${message.data.document}${message.data.page ? `, page ${message.data.page}` : ""}` : "",
+        ].filter(Boolean).join("\n"),
+      };
+    }
+    return { role: "user", text: message.text || "" };
+  }).filter((message) => message.text.trim());
 }
 
 function modelLabel(modelId) {

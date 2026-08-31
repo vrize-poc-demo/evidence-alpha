@@ -317,6 +317,23 @@ def practice_answer_key_enabled() -> bool:
     return os.getenv("USE_PRACTICE_ANSWER_KEY", "false").lower() in {"1", "true", "yes", "on"}
 
 
+def clean_chat_context(payload: AskRequest) -> list[dict[str, str]]:
+    context = []
+    for item in payload.chat_context[-8:]:
+        role = item.role if item.role in {"user", "assistant"} else "user"
+        text = item.text.strip()
+        if text:
+            context.append({"role": role, "text": text[:900]})
+    return context
+
+
+def contextual_search_question(question: str, chat_context: list[dict[str, str]]) -> str:
+    if not chat_context:
+        return question
+    prior = " ".join(item["text"] for item in chat_context[-4:])
+    return f"{prior} {question}"
+
+
 def update_job(job_id: str, **updates: object) -> None:
     with processor_lock:
         job = processor_jobs[job_id]
@@ -429,6 +446,7 @@ def ask(payload: AskRequest) -> AskResponse:
     question = payload.question.strip()
     if not question:
         raise HTTPException(status_code=400, detail="Question is required")
+    chat_context = clean_chat_context(payload)
 
     exact = index.exact_answer(question, payload.doc_name) if practice_answer_key_enabled() else None
     if exact:
@@ -455,7 +473,7 @@ def ask(payload: AskRequest) -> AskResponse:
         )
 
     with index_lock:
-        results = index.search(question, payload.doc_name, limit=5)
+        results = index.search(contextual_search_question(question, chat_context), payload.doc_name, limit=5)
     evidence = [
         Evidence(
             doc_name=chunk.doc_name,
@@ -466,19 +484,28 @@ def ask(payload: AskRequest) -> AskResponse:
         for chunk, score in results
     ]
     if llm_enabled():
-        llm_answer = answer_with_llm(question, results, payload.model_choice)
+        llm_answer = answer_with_llm(question, results, payload.model_choice, chat_context)
         answer = llm_answer["answer"]
         confidence = llm_answer["confidence"]
         calculation = llm_answer.get("calculation")
         status = llm_answer["status"]
         used_model = llm_answer.get("model_used") or f"{provider_name()}:{model_name()}"
+        evidence_id = llm_answer.get("evidence_id")
     else:
         answer, confidence, calculation = answer_from_evidence(question, results)
         status = "not_found" if answer.lower().startswith("not found") else "answered"
         used_model = "local-evidence-extractor"
+        evidence_id = None
 
-    top_doc = evidence[0].doc_name if evidence else payload.doc_name
-    top_page = evidence[0].page_num if evidence else None
+    cited_evidence = evidence[0] if evidence else None
+    try:
+        evidence_index = int(evidence_id) if evidence_id is not None else 0
+    except (TypeError, ValueError):
+        evidence_index = 0
+    if 1 <= evidence_index <= len(evidence):
+        cited_evidence = evidence[evidence_index - 1]
+    top_doc = cited_evidence.doc_name if cited_evidence else payload.doc_name
+    top_page = cited_evidence.page_num if cited_evidence else None
     return AskResponse(
         status=status,
         answer=answer,

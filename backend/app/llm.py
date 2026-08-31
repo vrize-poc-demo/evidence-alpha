@@ -70,7 +70,12 @@ def build_evidence(results: list[tuple[Chunk, float]]) -> list[dict]:
     return evidence
 
 
-def answer_with_llm(question: str, results: list[tuple[Chunk, float]], model_choice: str | None = None) -> dict:
+def answer_with_llm(
+    question: str,
+    results: list[tuple[Chunk, float]],
+    model_choice: str | None = None,
+    chat_context: list[dict[str, str]] | None = None,
+) -> dict:
     if not results:
         return {
             "status": "not_found",
@@ -93,11 +98,14 @@ def answer_with_llm(question: str, results: list[tuple[Chunk, float]], model_cho
     evidence = build_evidence(results)
     prompt = {
         "question": question,
+        "chat_context": chat_context or [],
         "evidence": evidence,
         "instructions": [
+            "Use chat_context only to understand follow-up references such as 'it', 'that company', or 'same year'.",
             "Answer only from the supplied evidence.",
             "If the evidence does not directly support the answer, return status not_found.",
             "Do not use outside knowledge.",
+            "Do not answer from chat_context alone; cited evidence must prove the answer.",
             "For numbers, preserve units and explain any calculation briefly.",
             "Return valid JSON only.",
         ],
