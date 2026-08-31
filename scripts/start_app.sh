@@ -51,8 +51,11 @@ FRONTEND_PID="$!"
 
 echo ""
 echo "Evidence Alpha is starting."
-echo "Backend:  http://127.0.0.1:$BACKEND_PORT"
-echo "Frontend: http://127.0.0.1:$FRONTEND_PORT"
+echo "Frontend app: http://127.0.0.1:$FRONTEND_PORT"
+echo "Backend API:  http://127.0.0.1:$BACKEND_PORT/api"
+echo "API docs:     http://127.0.0.1:$BACKEND_PORT/docs"
+echo ""
+echo "Note: http://127.0.0.1:$BACKEND_PORT also serves the frontend for Render-style single-service deployment."
 echo ""
 echo "Keep this terminal open. Press Ctrl-C to stop both servers."
 

@@ -96,6 +96,20 @@ Then open:
 http://127.0.0.1:5173
 ```
 
+The backend also runs at:
+
+```text
+http://127.0.0.1:8000
+```
+
+In this project the backend root (`/`) intentionally serves the React app, which is useful for Render's single-service deployment. For backend testing use:
+
+```text
+API helper page: http://127.0.0.1:8000/api
+Swagger docs:    http://127.0.0.1:8000/docs
+OpenAPI JSON:    http://127.0.0.1:8000/openapi.json
+```
+
 ## Reviewer Quick Start
 
 After cloning the repo:
@@ -193,6 +207,14 @@ Health check:
 curl http://localhost:8000/health
 ```
 
+API documentation:
+
+```text
+http://localhost:8000/docs
+```
+
+If `http://localhost:8000/` opens the frontend, that is expected. The backend root serves the React build for Render-style deployment; use `/docs` or `/api` for backend pages.
+
 ## Test The Project
 
 Run the smoke test:
@@ -258,6 +280,7 @@ Local version:
 
 ## API Endpoints
 
+- `GET /api` - backend helper page with documentation links
 - `GET /health` - service status
 - `GET /models` - supported model choices
 - `GET /filings` - indexed filings

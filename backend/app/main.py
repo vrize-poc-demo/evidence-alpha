@@ -8,6 +8,7 @@ from pathlib import Path
 
 from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
@@ -48,6 +49,44 @@ def health() -> dict[str, str]:
         "provider": provider_name(),
         "model": model_name(),
     }
+
+
+@app.get("/api", response_class=HTMLResponse)
+def api_home() -> str:
+    return """
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Evidence Alpha API</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 40px; line-height: 1.5; color: #172033; }
+          main { max-width: 760px; }
+          h1 { margin-bottom: 8px; }
+          p { color: #4d5b70; }
+          a { color: #0d6efd; font-weight: 600; }
+          li { margin: 10px 0; }
+          code { background: #f1f4f8; padding: 2px 6px; border-radius: 4px; }
+        </style>
+      </head>
+      <body>
+        <main>
+          <h1>Evidence Alpha API</h1>
+          <p>The backend root serves the React app for the single-service Render demo. Use these API links for backend testing.</p>
+          <ul>
+            <li><a href="/docs">Swagger API docs</a> - interactive endpoint tester</li>
+            <li><a href="/openapi.json">OpenAPI JSON</a> - machine-readable schema</li>
+            <li><a href="/health">Health check</a> - backend and model status</li>
+            <li><a href="/models">Model choices</a> - OpenAI and local Ollama options</li>
+            <li><a href="/filings">Indexed filings</a> - available SEC documents</li>
+            <li><a href="/processor">Processor jobs</a> - upload indexing status</li>
+          </ul>
+          <p>Frontend app: <code>http://127.0.0.1:5173</code> when running locally with <code>scripts/start_app.sh</code>.</p>
+        </main>
+      </body>
+    </html>
+    """
 
 
 @app.get("/models")
