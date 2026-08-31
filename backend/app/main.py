@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 
 from .indexer import FilingIndex, answer_from_evidence, concise_evidence
 from .indexer import ROOT
-from .llm import answer_with_llm, llm_enabled, model_name, provider_name
+from .llm import MODEL_CHOICES, answer_with_llm, llm_enabled, model_name, provider_name
 from .models import AskRequest, AskResponse, Evidence, FilingSummary, MultiUploadResponse, ProcessingJob, UploadResponse
 
 
@@ -48,6 +48,11 @@ def health() -> dict[str, str]:
         "provider": provider_name(),
         "model": model_name(),
     }
+
+
+@app.get("/models")
+def models() -> list[dict[str, str]]:
+    return [{"id": key, **value} for key, value in MODEL_CHOICES.items()]
 
 
 def practice_answer_key_enabled() -> bool:
@@ -185,12 +190,12 @@ def ask(payload: AskRequest) -> AskResponse:
         for chunk, score in results
     ]
     if llm_enabled():
-        llm_answer = answer_with_llm(question, results)
+        llm_answer = answer_with_llm(question, results, payload.model_choice)
         answer = llm_answer["answer"]
         confidence = llm_answer["confidence"]
         calculation = llm_answer.get("calculation")
         status = llm_answer["status"]
-        used_model = f"{provider_name()}:{model_name()}"
+        used_model = llm_answer.get("model_used") or f"{provider_name()}:{model_name()}"
     else:
         answer, confidence, calculation = answer_from_evidence(question, results)
         status = "not_found" if answer.lower().startswith("not found") else "answered"

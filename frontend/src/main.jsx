@@ -25,6 +25,7 @@ function App() {
   const [processorJobs, setProcessorJobs] = useState([]);
   const [health, setHealth] = useState(null);
   const [selectedDoc, setSelectedDoc] = useState("");
+  const [selectedModel, setSelectedModel] = useState("openai-gpt-4.1-mini");
   const [sessions, setSessions] = useState(loadSessions);
   const [activeSessionId, setActiveSessionId] = useState(() => sessions[0]?.id || createSessionId());
   const completedJobCount = useRef(0);
@@ -105,7 +106,7 @@ function App() {
     const response = await fetch(`${API}/ask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ question: clean, doc_name: selectedDoc }),
+      body: JSON.stringify({ question: clean, doc_name: selectedDoc, model_choice: selectedModel }),
     });
     const data = await response.json();
 
@@ -130,6 +131,7 @@ function App() {
         <Dashboard
           filings={filings}
           health={health}
+          selectedModel={selectedModel}
           sessions={sessions}
           activeJobs={activeJobs}
           completedJobs={completedJobs}
@@ -145,6 +147,8 @@ function App() {
           filings={filings}
           selectedDoc={selectedDoc}
           setSelectedDoc={setSelectedDoc}
+          selectedModel={selectedModel}
+          setSelectedModel={setSelectedModel}
           session={activeSession}
           askQuestion={askQuestion}
           startNewChat={startNewChat}
@@ -208,7 +212,7 @@ function GlobalProcessor({ jobs, activeJobs }) {
   );
 }
 
-function Dashboard({ filings, health, sessions, activeJobs, completedJobs, failedJobs, setPage }) {
+function Dashboard({ filings, health, selectedModel, sessions, activeJobs, completedJobs, failedJobs, setPage }) {
   const totalChunks = filings.reduce((sum, filing) => sum + filing.chunk_count, 0);
   return (
     <section className="page dashboard">
@@ -232,6 +236,7 @@ function Dashboard({ filings, health, sessions, activeJobs, completedJobs, faile
             <div><dt>LLM</dt><dd>{health?.llm_enabled === "true" ? "Enabled" : "Disabled"}</dd></div>
             <div><dt>Provider</dt><dd>{health?.provider || "Loading"}</dd></div>
             <div><dt>Model</dt><dd>{health?.model || "Loading"}</dd></div>
+            <div><dt>Selected</dt><dd>{modelLabel(selectedModel)}</dd></div>
           </dl>
         </section>
         <section className="workspacePanel">
@@ -314,7 +319,7 @@ function UploadPage({ fetchFilings, fetchProcessor, setPage }) {
   );
 }
 
-function ChatPage({ filings, selectedDoc, setSelectedDoc, session, askQuestion, startNewChat }) {
+function ChatPage({ filings, selectedDoc, setSelectedDoc, selectedModel, setSelectedModel, session, askQuestion, startNewChat }) {
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState(false);
 
@@ -359,6 +364,14 @@ function ChatPage({ filings, selectedDoc, setSelectedDoc, session, askQuestion, 
               {filings.map((filing) => (
                 <option key={filing.doc_name} value={filing.doc_name}>{filing.doc_name}</option>
               ))}
+            </select>
+          </label>
+          <label>
+            <span>Model</span>
+            <select value={selectedModel} onChange={(event) => setSelectedModel(event.target.value)}>
+              <option value="openai-gpt-4.1-mini">OpenAI ChatGPT 4.1-mini</option>
+              <option value="local-qwen3-14b">qwen3:14b local</option>
+              <option value="local-llama3.1">llama3.1 local</option>
             </select>
           </label>
           <div className="sampleList">
@@ -497,6 +510,12 @@ function loadSessions() {
   } catch {
     return [];
   }
+}
+
+function modelLabel(modelId) {
+  if (modelId === "local-qwen3-14b") return "qwen3:14b local";
+  if (modelId === "local-llama3.1") return "llama3.1 local";
+  return "OpenAI ChatGPT 4.1-mini";
 }
 
 createRoot(document.getElementById("root")).render(<App />);

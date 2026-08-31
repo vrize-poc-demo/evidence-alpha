@@ -68,6 +68,16 @@ There are two paths:
 
 The default model is `gpt-4.1-mini`, configured with `LLM_MODEL`. The model is used for inference only. The app does not train or fine-tune an LLM.
 
+## Model Selection
+
+The Ask page exposes exactly three model choices:
+
+- OpenAI ChatGPT 4.1-mini
+- qwen3:14b local
+- llama3.1 local
+
+OpenAI uses `OPENAI_API_KEY`. Local models use Ollama through the OpenAI-compatible API at `http://localhost:11434/v1`.
+
 ## Frontend
 
 React provides a demo-friendly analyst workspace:

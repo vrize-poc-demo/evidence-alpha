@@ -54,9 +54,10 @@ For the demo, keep the provided filings committed under `data/filings` and use u
 Backend:
 
 ```text
-LLM_PROVIDER=groq
-GROQ_API_KEY=your_groq_key
-LLM_MODEL=qwen/qwen3.8-27b
+LLM_PROVIDER=openai
+OPENAI_API_KEY=your_openai_key
+OLLAMA_BASE_URL=http://localhost:11434/v1
+LLM_MODEL=gpt-4.1-mini
 USE_LLM=true
 USE_PRACTICE_ANSWER_KEY=false
 ```
@@ -73,23 +74,23 @@ For better accuracy:
 
 - Send only the top retrieved evidence chunks to the LLM.
 - Keep `temperature=0`.
-- Use a stronger model if free limits allow it.
+- Use OpenAI for the hosted review path when accuracy matters.
 - Ask the LLM to return `not_found` when evidence is insufficient.
 - Use optional benchmark mode only for controlled evaluation, not live LLM behavior.
 
-## Free LLM Options
+## Supported Model Options
 
-Preferred temporary option:
+- OpenAI ChatGPT 4.1-mini
+- qwen3:14b local
+- llama3.1 local
 
-- Groq with `qwen/qwen3.8-27b`
+Local Ollama setup:
 
-Fallback:
-
-- OpenRouter with `openrouter/free`
-
-Paid higher-accuracy fallback:
-
-- OpenAI with `gpt-4.1-mini` or a stronger model
+```bash
+ollama pull qwen3:14b
+ollama pull llama3.1
+ollama serve
+```
 
 ## Render Notes
 

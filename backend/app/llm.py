@@ -9,10 +9,11 @@ from .indexer import Chunk, concise_evidence
 
 
 DEFAULT_PROVIDER = "openai"
-DEFAULT_MODELS = {
-    "openai": "gpt-4.1-mini",
-    "groq": "qwen/qwen3.8-27b",
-    "openrouter": "openrouter/free",
+DEFAULT_MODELS = {"openai": "gpt-4.1-mini", "ollama": "qwen3:14b"}
+MODEL_CHOICES = {
+    "openai-gpt-4.1-mini": {"provider": "openai", "model": "gpt-4.1-mini", "label": "OpenAI ChatGPT 4.1-mini"},
+    "local-qwen3-14b": {"provider": "ollama", "model": "qwen3:14b", "label": "qwen3:14b local"},
+    "local-llama3.1": {"provider": "ollama", "model": "llama3.1", "label": "llama3.1 local"},
 }
 
 
@@ -25,32 +26,32 @@ def llm_enabled() -> bool:
 
 
 def model_name() -> str:
-    return os.getenv("LLM_MODEL", DEFAULT_MODELS.get(provider_name(), DEFAULT_MODELS["groq"]))
+    return os.getenv("LLM_MODEL", DEFAULT_MODELS.get(provider_name(), DEFAULT_MODELS["openai"]))
 
 
-def api_key_name() -> str:
+def resolve_model_choice(model_choice: str | None) -> tuple[str, str, str]:
+    if model_choice and model_choice in MODEL_CHOICES:
+        choice = MODEL_CHOICES[model_choice]
+        return choice["provider"], choice["model"], choice["label"]
     provider = provider_name()
-    if provider == "groq":
-        return "GROQ_API_KEY"
-    if provider == "openrouter":
-        return "OPENROUTER_API_KEY"
+    model = model_name()
+    return provider, model, f"{provider}:{model}"
+
+
+def api_key_name(provider: str | None = None) -> str | None:
+    provider = provider or provider_name()
+    if provider == "ollama":
+        return None
     return "OPENAI_API_KEY"
 
 
-def client_for_provider() -> OpenAI:
-    provider = provider_name()
-    api_key = os.getenv(api_key_name())
-    if provider == "groq":
-        return OpenAI(api_key=api_key, base_url="https://api.groq.com/openai/v1")
-    if provider == "openrouter":
+def client_for_provider(provider: str) -> OpenAI:
+    if provider == "ollama":
         return OpenAI(
-            api_key=api_key,
-            base_url="https://openrouter.ai/api/v1",
-            default_headers={
-                "HTTP-Referer": os.getenv("APP_URL", "http://localhost:5173"),
-                "X-Title": "Evidence Alpha",
-            },
+            api_key=os.getenv("OLLAMA_API_KEY", "ollama"),
+            base_url=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1"),
         )
+    api_key = os.getenv(api_key_name(provider) or "")
     return OpenAI(api_key=api_key)
 
 
@@ -69,7 +70,7 @@ def build_evidence(results: list[tuple[Chunk, float]]) -> list[dict]:
     return evidence
 
 
-def answer_with_llm(question: str, results: list[tuple[Chunk, float]]) -> dict:
+def answer_with_llm(question: str, results: list[tuple[Chunk, float]], model_choice: str | None = None) -> dict:
     if not results:
         return {
             "status": "not_found",
@@ -78,12 +79,14 @@ def answer_with_llm(question: str, results: list[tuple[Chunk, float]]) -> dict:
             "calculation": None,
         }
 
-    key_name = api_key_name()
-    if not os.getenv(key_name):
+    provider, selected_model, label = resolve_model_choice(model_choice)
+    key_name = api_key_name(provider)
+    if key_name and not os.getenv(key_name):
         return {
             "status": "not_found",
             "answer": f"LLM is enabled, but {key_name} is not set. Add the key and restart the backend.",
             "confidence": 0.0,
+            "model_used": label,
             "calculation": None,
         }
 
@@ -108,9 +111,9 @@ def answer_with_llm(question: str, results: list[tuple[Chunk, float]]) -> dict:
     }
 
     try:
-        client = client_for_provider()
+        client = client_for_provider(provider)
         response = client.chat.completions.create(
-            model=model_name(),
+            model=selected_model,
             temperature=0,
             response_format={"type": "json_object"},
             messages=[
@@ -128,10 +131,18 @@ def answer_with_llm(question: str, results: list[tuple[Chunk, float]]) -> dict:
         content = response.choices[0].message.content or "{}"
         parsed = json.loads(content)
     except (OpenAIError, json.JSONDecodeError) as exc:
+        if provider == "ollama":
+            message = (
+                f"{label} is selected, but Ollama is not reachable. "
+                "Start Ollama locally and pull the selected model before asking again."
+            )
+        else:
+            message = f"LLM answer generation failed: {exc}"
         return {
             "status": "not_found",
-            "answer": f"LLM answer generation failed: {exc}",
+            "answer": message,
             "confidence": 0.0,
+            "model_used": label,
             "calculation": None,
         }
 
@@ -148,6 +159,7 @@ def answer_with_llm(question: str, results: list[tuple[Chunk, float]]) -> dict:
         "status": status,
         "answer": parsed.get("answer") or "Not found in this filing.",
         "confidence": max(0.0, min(confidence, 1.0)),
+        "model_used": label,
         "evidence_id": parsed.get("evidence_id"),
         "calculation": parsed.get("calculation"),
     }

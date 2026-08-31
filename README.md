@@ -7,7 +7,7 @@ Evidence Alpha is a React + FastAPI proof-of-solution app for answering analyst 
 - Dashboard page with top navigation
 - Single and multiple SEC filing upload
 - Global processing status for uploaded files
-- Ask page with filing selector and LLM-backed answers
+- Ask page with filing selector, model selector, and LLM-backed answers
 - Browser chat history across sessions
 - Evidence drawer with document/page citations
 - Local SEC HTML indexing from the copied dataset
@@ -119,20 +119,19 @@ Edit `backend/.env` for the recommended low-cost reviewer mode:
 ```text
 LLM_PROVIDER=openai
 OPENAI_API_KEY=your_openai_api_key_here
-GROQ_API_KEY=
-OPENROUTER_API_KEY=
+OLLAMA_BASE_URL=http://localhost:11434/v1
 LLM_MODEL=gpt-4.1-mini
 USE_LLM=true
 USE_PRACTICE_ANSWER_KEY=false
 ```
 
-Supported providers:
+Supported webpage model choices:
 
-- `openai` - recommended for the easiest reviewer setup
-- `groq` - free/low-cost fallback, but rate limits and model availability can vary
-- `openrouter` - fallback for free models with lower limits
+- OpenAI ChatGPT 4.1-mini
+- qwen3:14b local
+- llama3.1 local
 
-OpenAI paid mode:
+OpenAI mode:
 
 ```text
 LLM_PROVIDER=openai
@@ -141,14 +140,15 @@ LLM_MODEL=gpt-4.1-mini
 USE_LLM=true
 ```
 
-OpenRouter free-model mode:
+Local Ollama mode:
 
-```text
-LLM_PROVIDER=openrouter
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-LLM_MODEL=openrouter/free
-USE_LLM=true
+```bash
+ollama pull qwen3:14b
+ollama pull llama3.1
+ollama serve
 ```
+
+The webpage dropdown can then use `qwen3:14b local` or `llama3.1 local`. Local models require Ollama running at `http://localhost:11434`.
 
 ## Run The Backend
 
@@ -205,6 +205,7 @@ See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for a 1-2 week hosted demo path usi
 ## API Endpoints
 
 - `GET /health` - service status
+- `GET /models` - supported model choices
 - `GET /filings` - indexed filings
 - `GET /processor` - global upload/indexing processor status
 - `POST /filings/upload` - upload and index a new filing

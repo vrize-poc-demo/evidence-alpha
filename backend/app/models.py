@@ -21,6 +21,7 @@ class Evidence(BaseModel):
 class AskRequest(BaseModel):
     question: str
     doc_name: str | None = None
+    model_choice: str | None = None
 
 
 class AskResponse(BaseModel):

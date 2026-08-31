@@ -25,7 +25,7 @@ Open `http://localhost:5173`.
 2. Show the dashboard metrics and model status.
 3. Open Upload and select one or many `.htm` filings.
 4. Show the global processor status.
-5. Open Ask, select `3M_2022_10K`.
+5. Open Ask, select `3M_2022_10K`, and choose the model from the dropdown.
 6. Ask: `Is 3M a capital-intensive business based on FY2022 data?`
 7. Show the answer, source document, page, and evidence drawer.
 8. Open History and show the saved chat.
